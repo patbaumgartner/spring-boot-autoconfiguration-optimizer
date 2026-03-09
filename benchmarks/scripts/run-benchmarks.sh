@@ -66,6 +66,17 @@ if [ ! -f "${OPTIMIZER_PROPS}" ]; then
 fi
 
 echo "Training complete. Optimizer properties generated."
+
+# Extract training stats from the properties file header
+TRAINING_AVAILABLE=$(grep -oP '(?<=# Total available auto-configurations: )\d+' "${OPTIMIZER_PROPS}" || echo "")
+TRAINING_LOADED=$(grep -oP '(?<=# Total auto-configurations loaded: )\d+' "${OPTIMIZER_PROPS}" || echo "")
+TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations excluded: )\d+' "${OPTIMIZER_PROPS}" || echo "")
+
+if [ -n "${TRAINING_AVAILABLE}" ]; then
+    echo "  Available auto-configurations: ${TRAINING_AVAILABLE}"
+    echo "  Loaded auto-configurations:    ${TRAINING_LOADED}"
+    echo "  Excluded auto-configurations:  ${TRAINING_EXCLUDED}"
+fi
 echo ""
 
 # Step 2: Baseline measurements (no optimizer)
@@ -173,6 +184,20 @@ cat > "${REPORT_FILE}" << EOF
 | ⚪ Baseline (no optimizer) | ${BASELINE_AVG}ms |
 | 🟢 Optimized (with optimizer) | ${OPTIMIZED_AVG}ms |
 | **Improvement** | **${IMPROVEMENT}ms (${IMPROVEMENT_PCT}% faster)** |
+
+## Auto-Configuration Reduction
+
+$(if [ -n "${TRAINING_AVAILABLE}" ]; then
+cat << STATS_EOF
+| Metric | Count |
+|---|---|
+| Total available auto-configurations | ${TRAINING_AVAILABLE} |
+| Loaded (training set) | ${TRAINING_LOADED} |
+| Excluded by optimizer | ${TRAINING_EXCLUDED} |
+STATS_EOF
+else
+echo "_Training stats not available (properties file header format not recognised)_"
+fi)
 
 ## Detailed Results
 
