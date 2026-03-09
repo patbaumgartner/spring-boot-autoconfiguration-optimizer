@@ -95,9 +95,10 @@ jobs:
 
           for i in $(seq 1 ${{ github.event.inputs.iterations || '5' }}); do
             OUTPUT=$(timeout 60 java \
-              -cp "${TEMP_DIR}:${JAR}" \
+              -cp "${JAR}" \
+              -Dloader.path="${TEMP_DIR}" \
               -Dautoconfiguration.optimizer.enabled=true \
-              org.springframework.boot.loader.launch.JarLauncher \
+              org.springframework.boot.loader.launch.PropertiesLauncher \
               --spring.main.banner-mode=off \
               --server.port=0 \
               --spring.jpa.show-sql=false 2>&1 | \
