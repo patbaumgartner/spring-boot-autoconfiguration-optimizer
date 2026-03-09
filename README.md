@@ -135,7 +135,7 @@ autoconfigurationOptimizer {
 The optimizer is fully compatible with GraalVM native images and Spring Boot's AOT processing:
 
 - **Resource hints** are registered via `AutoConfigurationOptimizerRuntimeHints` to include the properties file in native images
-- **Reflection hints** are registered for the `EnvironmentPostProcessor`
+- **Reflection hints** are registered for `OptimizedAutoConfigurationImportFilter` and `TrainingRunApplicationListener`
 - Run the training run **before** `spring-boot:process-aot` to get maximum benefit
 
 ```bash
