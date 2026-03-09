@@ -61,11 +61,15 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 		log.info("Spring Boot Autoconfiguration Optimizer: Training run started");
 
 		try {
-			List<String> loadedAutoConfigs = detectLoadedAutoConfigurations();
-			writeTrainingFile(loadedAutoConfigs);
+			Set<String> availableAutoConfigs = loadAvailableAutoConfigurations();
+			List<String> loadedAutoConfigs = detectLoadedAutoConfigurations(availableAutoConfigs);
+			writeTrainingFile(loadedAutoConfigs, availableAutoConfigs.size());
 
-			log.info("Spring Boot Autoconfiguration Optimizer: Training run complete. "
-					+ "Detected {} loaded auto-configurations.", loadedAutoConfigs.size());
+			log.info(
+					"Spring Boot Autoconfiguration Optimizer: Training run complete. "
+							+ "Detected {} loaded auto-configurations out of {} available ({} excluded).",
+					loadedAutoConfigs.size(), availableAutoConfigs.size(),
+					availableAutoConfigs.size() - loadedAutoConfigs.size());
 
 			if (properties.isExitAfterTraining()) {
 				log.info("Spring Boot Autoconfiguration Optimizer: Exiting after training run.");
@@ -95,8 +99,10 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 	 * </ol>
 	 */
 	List<String> detectLoadedAutoConfigurations() {
-		Set<String> availableAutoConfigs = loadAvailableAutoConfigurations();
+		return detectLoadedAutoConfigurations(loadAvailableAutoConfigurations());
+	}
 
+	private List<String> detectLoadedAutoConfigurations(Set<String> availableAutoConfigs) {
 		Map<String, ConditionEvaluationReport.ConditionAndOutcomes> conditionOutcomes = conditionEvaluationReport
 			.getConditionAndOutcomesBySource();
 
@@ -140,7 +146,7 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 	/**
 	 * Writes the list of loaded auto-configurations to the output file.
 	 */
-	void writeTrainingFile(List<String> loadedAutoConfigs) throws IOException {
+	void writeTrainingFile(List<String> loadedAutoConfigs, int totalAvailableCount) throws IOException {
 		Path outputDir = Paths.get(properties.getOutputDirectory());
 		Files.createDirectories(outputDir);
 
@@ -151,7 +157,9 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 		lines.add("# Training run completed on: " + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
 		lines.add("# Copy this file to src/main/resources/META-INF/ to enable optimization");
 		lines.add("#");
+		lines.add("# Total available auto-configurations: " + totalAvailableCount);
 		lines.add("# Total auto-configurations loaded: " + loadedAutoConfigs.size());
+		lines.add("# Auto-configurations excluded: " + (totalAvailableCount - loadedAutoConfigs.size()));
 		lines.add("");
 		lines.add(TRAINING_TIMESTAMP_KEY + "=" + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
 		lines.add("");

@@ -33,6 +33,7 @@ jobs:
         run: mvn --batch-mode --no-transfer-progress package -DskipTests
 
       - name: Run training run on PetClinic
+        id: training
         run: |
           mkdir -p benchmarks/results/training
           java \
@@ -50,6 +51,14 @@ jobs:
 
           echo "Training properties:"
           cat benchmarks/results/training/autoconfiguration-optimizer.properties
+
+          # Export stats to the environment for later steps
+          TRAINING_AVAILABLE=$(grep -oP '(?<=# Total available auto-configurations: )\d+' benchmarks/results/training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_LOADED=$(grep -oP '(?<=# Total auto-configurations loaded: )\d+' benchmarks/results/training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations excluded: )\d+' benchmarks/results/training/autoconfiguration-optimizer.properties || echo "")
+          echo "training_available=${TRAINING_AVAILABLE}" >> $GITHUB_OUTPUT
+          echo "training_loaded=${TRAINING_LOADED}" >> $GITHUB_OUTPUT
+          echo "training_excluded=${TRAINING_EXCLUDED}" >> $GITHUB_OUTPUT
 
       - name: Package optimized fat JAR
         run: |
@@ -184,6 +193,14 @@ jobs:
           **Target Application:** Spring PetClinic Sample (Web + JPA + Actuator + Cache + Validation)
           **CI Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
+          ## Auto-Configuration Reduction
+
+          | Metric | Count |
+          |---|---|
+          | Total available auto-configurations | ${{ steps.training.outputs.training_available || 'N/A' }} |
+          | Loaded (training set) | ${{ steps.training.outputs.training_loaded || 'N/A' }} |
+          | Excluded by optimizer | ${{ steps.training.outputs.training_excluded || 'N/A' }} |
+
           ## Startup Time Results
 
           | Configuration | Average Startup Time |
@@ -223,6 +240,9 @@ jobs:
           | 🟢 Optimized startup time | ${OPTIMIZED:-N/A}ms |
           | 📈 Improvement | ${IMPROVEMENT}ms |
           | 📊 Speed improvement | ${PCT}% faster |
+          | 🔎 Available auto-configurations | ${{ steps.training.outputs.training_available || 'N/A' }} |
+          | ✅ Loaded (training set) | ${{ steps.training.outputs.training_loaded || 'N/A' }} |
+          | ⛔ Excluded by optimizer | ${{ steps.training.outputs.training_excluded || 'N/A' }} |
 
           *Target application: PetClinic Sample (Web + JPA + Actuator + Cache + Validation)*
           EOF

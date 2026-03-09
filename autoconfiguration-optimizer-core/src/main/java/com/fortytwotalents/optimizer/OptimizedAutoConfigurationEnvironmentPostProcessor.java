@@ -27,19 +27,16 @@ import java.util.stream.Collectors;
  * training run.
  *
  * <p>
- * This processor is activated only when:
- * <ol>
- * <li>{@code autoconfiguration.optimizer.enabled} is {@code true} (default)</li>
- * <li>{@code autoconfiguration.optimizer.training-run} is {@code false} (default)</li>
- * <li>A file named {@code META-INF/autoconfiguration-optimizer.properties} exists on the
- * classpath</li>
- * </ol>
+ * <strong>Note:</strong> This class is retained as a constants holder for
+ * {@link OptimizedAutoConfigurationImportFilter} and
+ * {@link TrainingRunApplicationListener}. The actual optimization is now performed by
+ * {@link OptimizedAutoConfigurationImportFilter}, which is more efficient because it
+ * operates directly inside Spring Boot's {@code AutoConfigurationImportSelector} pipeline
+ * — before auto-configuration classes are loaded or their conditions evaluated — without
+ * any environment manipulation. Additionally, {@link EnvironmentPostProcessor} itself is
+ * deprecated for removal in Spring Boot 4.
  *
- * <p>
- * The processor reads the list of loaded auto-configurations from the training file and
- * sets {@code spring.autoconfigure.exclude} to exclude all auto-configurations that are
- * available on the classpath but were not present in the training file.
- *
+ * @see OptimizedAutoConfigurationImportFilter
  * @see TrainingRunApplicationListener
  * @see AutoConfigurationOptimizerProperties
  */
