@@ -51,6 +51,18 @@ jobs:
           echo "Training properties:"
           cat benchmarks/results/training/autoconfiguration-optimizer.properties
 
+      - name: Package optimized fat JAR
+        run: |
+          # Copy the generated training properties into the application resources
+          # so it gets baked into the fat JAR - this is the real-world usage pattern
+          mkdir -p integration-tests/petclinic-sample/src/main/resources/META-INF
+          cp benchmarks/results/training/autoconfiguration-optimizer.properties \
+             integration-tests/petclinic-sample/src/main/resources/META-INF/
+
+          # Rebuild only the petclinic module to produce the optimized fat JAR
+          mvn --batch-mode --no-transfer-progress package -DskipTests \
+            -pl integration-tests/petclinic-sample -am
+
       - name: Run baseline measurements
         id: baseline
         run: |
@@ -83,21 +95,11 @@ jobs:
       - name: Run optimized measurements
         id: optimized
         run: |
-          # Prepare classpath with optimizer properties
-          TEMP_DIR=$(mktemp -d)
-          mkdir -p "${TEMP_DIR}/META-INF"
-          cp benchmarks/results/training/autoconfiguration-optimizer.properties \
-             "${TEMP_DIR}/META-INF/"
-
           TOTAL=0
           COUNT=0
-          JAR=$(ls integration-tests/petclinic-sample/target/autoconfiguration-optimizer-petclinic-sample-*.jar | head -1)
-
           for i in $(seq 1 ${{ github.event.inputs.iterations || '5' }}); do
             OUTPUT=$(timeout 60 java \
-              -cp "${TEMP_DIR}:${JAR}" \
-              -Dautoconfiguration.optimizer.enabled=true \
-              org.springframework.boot.loader.launch.JarLauncher \
+              -jar integration-tests/petclinic-sample/target/autoconfiguration-optimizer-petclinic-sample-*.jar \
               --spring.main.banner-mode=off \
               --server.port=0 \
               --spring.jpa.show-sql=false 2>&1 | \
@@ -111,8 +113,6 @@ jobs:
               echo "Optimized run ${i}: ${MS}ms"
             fi
           done
-
-          rm -rf "${TEMP_DIR}"
 
           if [ ${COUNT} -gt 0 ]; then
             AVG=$((TOTAL / COUNT))
