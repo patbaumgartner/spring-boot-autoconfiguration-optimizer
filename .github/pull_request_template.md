@@ -20,8 +20,7 @@
 
 ## Spring Boot Compatibility
 
-- [ ] Tested with Spring Boot 3.4.x
-- [ ] No changes affecting Spring Boot 3.3.x compatibility
+- [ ] Tested with Spring Boot 4.0.x
 
 ## Checklist
 
