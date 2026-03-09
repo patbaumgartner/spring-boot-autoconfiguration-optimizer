@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.fortytwotalents.optimizer.gradle.AutoConfigurationOptimizerPluginTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-03-09T23:37:46.771Z" hostname="runnervm0kj6c" time="7.323">
-  <properties/>
-  <testcase name="pluginAppliesWithoutErrors()" classname="com.fortytwotalents.optimizer.gradle.AutoConfigurationOptimizerPluginTest" time="6.616"/>
-  <testcase name="pluginRegistersTrainTask()" classname="com.fortytwotalents.optimizer.gradle.AutoConfigurationOptimizerPluginTest" time="0.687"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>
