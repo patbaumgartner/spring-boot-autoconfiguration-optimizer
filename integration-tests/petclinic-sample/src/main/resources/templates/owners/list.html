@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Owners</title></head>
+<body>
+<h1>Owners</h1>
+<table>
+    <tr th:each="owner : ${owners}">
+        <td th:text="${owner.firstName + ' ' + owner.lastName}">Name</td>
+        <td th:text="${owner.city}">City</td>
+        <td><a th:href="@{/owners/{id}(id=${owner.id})}">Details</a></td>
+    </tr>
+</table>
+<a href="/owners/new">Add New Owner</a>
+</body>
+</html>
