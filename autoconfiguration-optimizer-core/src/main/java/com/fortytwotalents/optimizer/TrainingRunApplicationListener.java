@@ -82,6 +82,17 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 	 * Detects which auto-configurations were loaded by cross-referencing the
 	 * {@link ConditionEvaluationReport} with all available auto-configurations on the
 	 * classpath.
+	 *
+	 * <p>
+	 * Auto-configurations fall into two categories in the report:
+	 * <ol>
+	 * <li>Those with class-level conditions (e.g. {@code @ConditionalOnClass}) appear as
+	 * top-level keys and are included only when {@code isFullMatch()} is
+	 * {@code true}.</li>
+	 * <li>Those without class-level conditions (always loaded) appear only as
+	 * {@code ClassName#methodName} keys for their {@code @Bean} methods. These must also
+	 * be captured, otherwise they are incorrectly excluded by the optimizer.</li>
+	 * </ol>
 	 */
 	List<String> detectLoadedAutoConfigurations() {
 		Set<String> availableAutoConfigs = loadAvailableAutoConfigurations();
@@ -89,13 +100,28 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 		Map<String, ConditionEvaluationReport.ConditionAndOutcomes> conditionOutcomes = conditionEvaluationReport
 			.getConditionAndOutcomesBySource();
 
-		return conditionOutcomes.entrySet()
+		// Collect class names that appear only as method-level entries
+		// (e.g. "com.example.FooAutoConfiguration#fooBean" ->
+		// "com.example.FooAutoConfiguration").
+		// Note: '#' is the method separator used by ConditionEvaluationReport;
+		// inner-class names use '$' and are unaffected by this filter.
+		Set<String> classesFromMethodEntries = conditionOutcomes.keySet()
 			.stream()
-			.filter(entry -> availableAutoConfigs.contains(entry.getKey()))
-			.filter(entry -> entry.getValue().isFullMatch())
-			.map(Map.Entry::getKey)
-			.sorted()
-			.collect(Collectors.toList());
+			.filter(key -> key.contains("#"))
+			.map(key -> key.substring(0, key.indexOf('#')))
+			.collect(Collectors.toSet());
+
+		return availableAutoConfigs.stream().filter(config -> {
+			ConditionEvaluationReport.ConditionAndOutcomes outcomes = conditionOutcomes.get(config);
+			if (outcomes != null) {
+				// Class-level conditions exist: include only when all conditions passed
+				return outcomes.isFullMatch();
+			}
+			// No class-level conditions: include when the class appears in any
+			// bean-method
+			// entry, which confirms it was loaded unconditionally
+			return classesFromMethodEntries.contains(config);
+		}).sorted().collect(Collectors.toList());
 	}
 
 	/**
