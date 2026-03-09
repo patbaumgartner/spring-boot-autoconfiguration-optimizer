@@ -135,22 +135,6 @@ mvn spring-boot:process-aot                   # 2. AOT processing
 mvn -Pnative native:compile                   # 3. Native compilation
 ```
 
-## App CDS (Class Data Sharing) Support
-
-Combine the optimizer with AppCDS for maximum startup time reduction:
-
-```xml
-<plugin>
-    <groupId>com.fortytwotalents</groupId>
-    <artifactId>spring-boot-autoconfiguration-optimizer-maven-plugin</artifactId>
-    <configuration>
-        <mainClass>com.example.MyApplication</mainClass>
-        <enableCds>true</enableCds>
-        <cdsArchive>app.jsa</cdsArchive>
-    </configuration>
-</plugin>
-```
-
 ## Configuration Reference
 
 | Property | Default | Description |
@@ -160,7 +144,6 @@ Combine the optimizer with AppCDS for maximum startup time reduction:
 | `autoconfiguration.optimizer.output-file` | `autoconfiguration-optimizer.properties` | Output file name |
 | `autoconfiguration.optimizer.output-directory` | `.` | Output directory for training |
 | `autoconfiguration.optimizer.exit-after-training` | `false` | Exit JVM after training |
-| `autoconfiguration.optimizer.enable-cds` | `false` | Create CDS archive during training (Maven plugin) |
 
 ## Spring Boot Compatibility
 
