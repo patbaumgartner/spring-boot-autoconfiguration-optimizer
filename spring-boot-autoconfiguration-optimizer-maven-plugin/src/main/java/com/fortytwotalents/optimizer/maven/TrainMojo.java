@@ -18,6 +18,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -269,9 +270,24 @@ public class TrainMojo extends AbstractMojo {
 			return springBootMainClass;
 		}
 
+		// Try to auto-detect by scanning compiled classes for @SpringBootApplication
+		// or @SpringBootConfiguration
+		Path outputDirectory = Paths.get(project.getBuild().getOutputDirectory());
+		try {
+			Optional<String> detected = MainClassFinder.findMainClass(outputDirectory);
+			if (detected.isPresent()) {
+				getLog().info("Spring Boot Autoconfiguration Optimizer: Auto-detected main class: " + detected.get());
+				return detected.get();
+			}
+		}
+		catch (IOException e) {
+			getLog().debug("Could not scan classes directory for main class: " + e.getMessage());
+		}
+
 		throw new MojoExecutionException(
-				"Could not determine main class. Please configure the 'mainClass' parameter or "
-						+ "set 'start-class' property in your project.");
+				"Could not determine main class. Please configure the 'mainClass' parameter, "
+						+ "set 'start-class' property in your project, or ensure the project is compiled "
+						+ "and contains a class annotated with @SpringBootApplication.");
 	}
 
 	private void copyToTargetDirectory(Path sourceFile) throws IOException {

@@ -2,6 +2,8 @@ package com.fortytwotalents.optimizer.gradle;
 
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskProvider;
 
 import java.io.File;
@@ -70,6 +72,19 @@ public class AutoConfigurationOptimizerPlugin implements Plugin<Project> {
                 }
                 return null;
             }));
+        });
+
+        // If the Java plugin is applied, automatically configure classesDirectories
+        // so the main class can be auto-detected without any additional configuration
+        project.getPlugins().withId("java", javaPlugin -> {
+            trainTask.configure(task -> {
+                JavaPluginExtension javaExtension = project.getExtensions().findByType(JavaPluginExtension.class);
+                if (javaExtension != null) {
+                    SourceSetContainer sourceSets = javaExtension.getSourceSets();
+                    task.getClassesDirectories()
+                            .from(sourceSets.named("main").map(ss -> ss.getOutput().getClassesDirs()));
+                }
+            });
         });
 
         // Also add a copy task that copies the generated file to the target directory
