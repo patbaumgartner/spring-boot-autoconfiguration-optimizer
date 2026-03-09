@@ -27,10 +27,10 @@ public class AutoConfigurationOptimizerRuntimeHints implements RuntimeHintsRegis
 		hints.resources()
 			.registerPattern("META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports");
 
-		// Register reflection for the EnvironmentPostProcessor so it can be instantiated
+		// Register reflection for the import filter so it can be instantiated
 		hints.reflection()
-			.registerType(OptimizedAutoConfigurationEnvironmentPostProcessor.class,
-					MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS);
+			.registerType(OptimizedAutoConfigurationImportFilter.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS,
+					MemberCategory.INVOKE_PUBLIC_METHODS);
 
 		// Register reflection for the TrainingRunApplicationListener
 		hints.reflection()
