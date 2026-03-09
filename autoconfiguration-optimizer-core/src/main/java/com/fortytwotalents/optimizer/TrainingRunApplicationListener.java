@@ -35,9 +35,9 @@ import java.util.stream.Collectors;
  * <p>
  * The generated file should be placed in {@code src/main/resources/META-INF/} to be
  * picked up by subsequent builds and used by the
- * {@link OptimizedAutoConfigurationEnvironmentPostProcessor}.
+ * {@link OptimizedAutoConfigurationImportFilter}.
  *
- * @see OptimizedAutoConfigurationEnvironmentPostProcessor
+ * @see OptimizedAutoConfigurationImportFilter
  * @see AutoConfigurationOptimizerProperties
  */
 public class TrainingRunApplicationListener implements ApplicationListener<ApplicationReadyEvent> {
@@ -165,11 +165,11 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 		lines.add("");
 
 		if (loadedAutoConfigs.isEmpty()) {
-			lines.add(OptimizedAutoConfigurationEnvironmentPostProcessor.LOADED_CONFIGURATIONS_KEY + "=");
+			lines.add(OptimizedAutoConfigurationImportFilter.LOADED_CONFIGURATIONS_KEY + "=");
 		}
 		else {
 			StringBuilder sb = new StringBuilder(
-					OptimizedAutoConfigurationEnvironmentPostProcessor.LOADED_CONFIGURATIONS_KEY + "=\\\n");
+					OptimizedAutoConfigurationImportFilter.LOADED_CONFIGURATIONS_KEY + "=\\\n");
 			for (int i = 0; i < loadedAutoConfigs.size(); i++) {
 				sb.append("  ").append(loadedAutoConfigs.get(i));
 				if (i < loadedAutoConfigs.size() - 1) {
