@@ -3,14 +3,13 @@ package com.fortytwotalents.optimizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionEvaluationReport;
+import org.springframework.boot.context.annotation.ImportCandidates;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,7 +17,6 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -85,7 +83,7 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 	 * {@link ConditionEvaluationReport} with all available auto-configurations on the
 	 * classpath.
 	 */
-	List<String> detectLoadedAutoConfigurations() throws IOException {
+	List<String> detectLoadedAutoConfigurations() {
 		Set<String> availableAutoConfigs = loadAvailableAutoConfigurations();
 
 		Map<String, ConditionEvaluationReport.ConditionAndOutcomes> conditionOutcomes = conditionEvaluationReport
@@ -101,27 +99,13 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 	}
 
 	/**
-	 * Loads all available auto-configuration class names from
-	 * {@code META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports}
-	 * files on the classpath.
+	 * Loads all available auto-configuration class names using Spring Boot's
+	 * {@link ImportCandidates} mechanism.
 	 */
-	Set<String> loadAvailableAutoConfigurations() throws IOException {
-		Set<String> autoConfigs = new HashSet<>();
+	Set<String> loadAvailableAutoConfigurations() {
 		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-		Enumeration<URL> resources = classLoader
-			.getResources(OptimizedAutoConfigurationEnvironmentPostProcessor.AUTO_CONFIGURATION_IMPORTS_LOCATION);
-
-		while (resources.hasMoreElements()) {
-			URL url = resources.nextElement();
-			try (BufferedReader reader = new BufferedReader(
-					new InputStreamReader(url.openStream(), StandardCharsets.UTF_8))) {
-				reader.lines()
-					.map(String::trim)
-					.filter(line -> !line.isEmpty() && !line.startsWith("#"))
-					.forEach(autoConfigs::add);
-			}
-		}
-
+		Set<String> autoConfigs = new HashSet<>(
+				ImportCandidates.load(AutoConfiguration.class, classLoader).getCandidates());
 		log.debug("Spring Boot Autoconfiguration Optimizer: Found {} available auto-configurations",
 				autoConfigs.size());
 		return autoConfigs;
