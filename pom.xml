@@ -45,6 +45,8 @@
     <modules>
         <module>autoconfiguration-optimizer-core</module>
         <module>spring-boot-autoconfiguration-optimizer-maven-plugin</module>
+        <module>integration-tests</module>
+        <module>benchmarks</module>
     </modules>
 
     <properties>
@@ -79,6 +81,11 @@
             <dependency>
                 <groupId>com.fortytwotalents</groupId>
                 <artifactId>autoconfiguration-optimizer-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fortytwotalents</groupId>
+                <artifactId>autoconfiguration-optimizer-petclinic-sample</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

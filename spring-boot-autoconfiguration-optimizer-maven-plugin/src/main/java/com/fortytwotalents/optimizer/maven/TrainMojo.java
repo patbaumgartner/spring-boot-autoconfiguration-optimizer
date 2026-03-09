@@ -118,6 +118,22 @@ public class TrainMojo extends AbstractMojo {
     private boolean skip;
 
     /**
+     * Enable Class Data Sharing (CDS) archive creation during the training run.
+     * When enabled, a CDS archive file (.jsa) is created alongside the training properties.
+     * This can be combined with the optimizer for additional startup time improvements.
+     * Requires Java 13+ for AppCDS support.
+     */
+    @Parameter(property = "autoconfiguration.optimizer.enableCds", defaultValue = "false")
+    private boolean enableCds;
+
+    /**
+     * The name of the CDS archive file to create.
+     * Only used when {@code enableCds} is {@code true}.
+     */
+    @Parameter(property = "autoconfiguration.optimizer.cdsArchive", defaultValue = "app.jsa")
+    private String cdsArchive;
+
+    /**
      * The Spring Boot executable JAR to run for the training. If not specified,
      * the plugin will attempt to run the main class directly.
      */
@@ -174,6 +190,15 @@ public class TrainMojo extends AbstractMojo {
             // Copy to target directory
             copyToTargetDirectory(outputFilePath);
 
+            if (enableCds) {
+                Path cdsArchivePath = workingDirectory.toPath().resolve(cdsArchive);
+                if (Files.exists(cdsArchivePath)) {
+                    getLog().info("Spring Boot Autoconfiguration Optimizer: CDS archive created at: " + cdsArchivePath);
+                    Path targetCdsFile = targetDirectory.toPath().resolve(cdsArchive);
+                    Files.copy(cdsArchivePath, targetCdsFile, StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+
             getLog().info("Spring Boot Autoconfiguration Optimizer: Training run complete. "
                     + "Properties file copied to: " + targetDirectory);
 
@@ -195,6 +220,14 @@ public class TrainMojo extends AbstractMojo {
 
         // JVM arguments
         command.addAll(jvmArguments);
+
+        if (enableCds) {
+            Path cdsArchivePath = workingDirectory.toPath().resolve(cdsArchive);
+            // Insert CDS flags after the java executable (after jvmArguments)
+            command.add("-Xshare:off");
+            command.add("-XX:ArchiveClassesAtExit=" + cdsArchivePath.toAbsolutePath());
+            getLog().info("Spring Boot Autoconfiguration Optimizer: CDS archive will be created at: " + cdsArchivePath);
+        }
 
         // Training run system properties
         command.add("-Dautoconfiguration.optimizer.training-run=true");
