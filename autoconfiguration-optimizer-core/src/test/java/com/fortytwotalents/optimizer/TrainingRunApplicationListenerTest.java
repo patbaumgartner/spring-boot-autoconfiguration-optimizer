@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -82,7 +83,7 @@ class TrainingRunApplicationListenerTest {
 		ConditionEvaluationReport.ConditionAndOutcomes outcomes = mock(
 				ConditionEvaluationReport.ConditionAndOutcomes.class);
 		when(outcomes.isFullMatch()).thenReturn(true);
-		when(report.getConditionAndOutcomesBySource()).thenReturn(java.util.Map.of(knownAutoConfig, outcomes));
+		when(report.getConditionAndOutcomesBySource()).thenReturn(Map.of(knownAutoConfig, outcomes));
 
 		TrainingRunApplicationListener listener = new TrainingRunApplicationListener(properties, report);
 		List<String> detected = listener.detectLoadedAutoConfigurations();
@@ -90,6 +91,49 @@ class TrainingRunApplicationListenerTest {
 		// The known auto-configuration should be in the result since it matches and is in
 		// the imports file
 		assertThat(detected).contains(knownAutoConfig);
+	}
+
+	@Test
+	void detectLoadedAutoConfigurations_includesAutoConfigsWithOnlyMethodLevelConditions() {
+		AutoConfigurationOptimizerProperties properties = new AutoConfigurationOptimizerProperties();
+		ConditionEvaluationReport report = mock(ConditionEvaluationReport.class);
+
+		// Simulate an auto-configuration that has no class-level conditions but has
+		// conditional @Bean methods. Such configs appear only as "ClassName#methodName"
+		// entries in the ConditionEvaluationReport, not as top-level class entries.
+		// A real example is EndpointAutoConfiguration in Spring Boot Actuator.
+		String knownAutoConfig = "org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration";
+		String methodEntry = knownAutoConfig + "#placeholderPropertiesDeprecated";
+		ConditionEvaluationReport.ConditionAndOutcomes methodOutcomes = mock(
+				ConditionEvaluationReport.ConditionAndOutcomes.class);
+		when(methodOutcomes.isFullMatch()).thenReturn(true);
+
+		// No class-level entry for the auto-config, only the method-level entry
+		when(report.getConditionAndOutcomesBySource()).thenReturn(Map.of(methodEntry, methodOutcomes));
+
+		TrainingRunApplicationListener listener = new TrainingRunApplicationListener(properties, report);
+		List<String> detected = listener.detectLoadedAutoConfigurations();
+
+		// The auto-configuration must be detected even though it has no class-level entry
+		assertThat(detected).contains(knownAutoConfig);
+	}
+
+	@Test
+	void detectLoadedAutoConfigurations_excludesAutoConfigsWithFailedClassLevelConditions() {
+		AutoConfigurationOptimizerProperties properties = new AutoConfigurationOptimizerProperties();
+		ConditionEvaluationReport report = mock(ConditionEvaluationReport.class);
+
+		// Auto-config whose class-level condition failed (isFullMatch = false)
+		String notMatchedConfig = "org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration";
+		ConditionEvaluationReport.ConditionAndOutcomes failedOutcomes = mock(
+				ConditionEvaluationReport.ConditionAndOutcomes.class);
+		when(failedOutcomes.isFullMatch()).thenReturn(false);
+		when(report.getConditionAndOutcomesBySource()).thenReturn(Map.of(notMatchedConfig, failedOutcomes));
+
+		TrainingRunApplicationListener listener = new TrainingRunApplicationListener(properties, report);
+		List<String> detected = listener.detectLoadedAutoConfigurations();
+
+		assertThat(detected).doesNotContain(notMatchedConfig);
 	}
 
 }
