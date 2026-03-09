@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.fortytwotalents.optimizer.gradle.AutoConfigurationOptimizerPluginTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-03-09T09:50:26.409Z" hostname="runnervm0kj6c" time="5.425">
+<testsuite name="com.fortytwotalents.optimizer.gradle.AutoConfigurationOptimizerPluginTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-03-09T13:24:21.445Z" hostname="runnervm0kj6c" time="5.876">
   <properties/>
-  <testcase name="pluginAppliesWithoutErrors()" classname="com.fortytwotalents.optimizer.gradle.AutoConfigurationOptimizerPluginTest" time="5.005"/>
-  <testcase name="pluginRegistersTrainTask()" classname="com.fortytwotalents.optimizer.gradle.AutoConfigurationOptimizerPluginTest" time="0.406"/>
+  <testcase name="pluginAppliesWithoutErrors()" classname="com.fortytwotalents.optimizer.gradle.AutoConfigurationOptimizerPluginTest" time="5.385"/>
+  <testcase name="pluginRegistersTrainTask()" classname="com.fortytwotalents.optimizer.gradle.AutoConfigurationOptimizerPluginTest" time="0.473"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>
