@@ -19,22 +19,32 @@ The result: fewer condition evaluations, faster startup, and zero changes to you
 ## How It Works
 
 1. **Training Run** — Start your application once with training mode enabled. The optimizer captures every auto-configuration that passed its conditions and writes the list to `META-INF/autoconfiguration-optimizer.properties`.
-2. **Subsequent Starts** — An `EnvironmentPostProcessor` reads the file at startup and adds all unused auto-configurations to `spring.autoconfigure.exclude` before the context is even created.
+2. **Subsequent Starts** — An `AutoConfigurationImportFilter` reads the file at startup and directly restricts which auto-configurations Spring Boot imports to only those in the training set.
 3. **Safe by Default** — If the file is missing (e.g., during development without the training step), the optimizer does nothing and Spring Boot starts as usual.
 
 ```
 Training Run                    Production Run
 ────────────────                ──────────────────────────────────
-App starts normally             EnvironmentPostProcessor reads
+App starts normally             AutoConfigurationImportFilter reads
 with all auto-configs           META-INF/autoconfiguration-
                                 optimizer.properties
 ConditionEvaluationReport                  │
-records matched configs         Sets spring.autoconfigure.exclude
-                                for all configs NOT in the list
+records matched configs         Filters candidate list to only
+                                configs in the training set
 Writes                                     │
-autoconfiguration-              Spring Boot skips condition
-optimizer.properties            evaluation for excluded configs
+autoconfiguration-              Spring Boot skips loading and
+optimizer.properties            condition evaluation for all
+                                filtered-out configurations
 ```
+
+### Why `AutoConfigurationImportFilter` Instead of `spring.autoconfigure.exclude`
+
+The optimizer uses Spring Boot's `AutoConfigurationImportFilter` extension point rather than setting `spring.autoconfigure.exclude`. This is more efficient because:
+
+- **Single pass**: The list of auto-configuration candidates is loaded only once by Spring Boot's `AutoConfigurationImportSelector`, not twice (once in an `EnvironmentPostProcessor` and once again inside the selector).
+- **No string manipulation**: Filtering is done via a simple `boolean[]` array operation on the candidate strings — no comma-separated list building or property parsing required.
+- **Right extension point**: The filter runs directly inside the auto-configuration import pipeline, at the earliest possible moment before any auto-configuration class is loaded or its conditions evaluated.
+- **Forward-compatible**: `EnvironmentPostProcessor` is deprecated for removal in Spring Boot 4; `AutoConfigurationImportFilter` is the recommended approach.
 
 ## 🚀 Benchmark Results
 

@@ -1,1 +1,2 @@
-org.springframework.boot.env.EnvironmentPostProcessor=com.fortytwotalents.optimizer.OptimizedAutoConfigurationEnvironmentPostProcessor
+org.springframework.boot.autoconfigure.AutoConfigurationImportFilter=\
+  com.fortytwotalents.optimizer.OptimizedAutoConfigurationImportFilter
