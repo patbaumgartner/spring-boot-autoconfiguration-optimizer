@@ -11,7 +11,10 @@ import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.work.DisableCachingByDefault;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,6 +30,7 @@ import java.util.stream.Collectors;
  * Gradle task that runs a Spring Boot application in training mode to detect
  * which auto-configurations are loaded.
  */
+@DisableCachingByDefault(because = "Runs an external Spring Boot process whose output depends on the environment")
 public abstract class TrainTask extends DefaultTask {
 
     /**
@@ -40,6 +44,7 @@ public abstract class TrainTask extends DefaultTask {
      * The Spring Boot executable JAR to run.
      */
     @InputFile
+    @PathSensitive(PathSensitivity.NONE)
     @Optional
     public abstract RegularFileProperty getJar();
 
