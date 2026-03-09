@@ -33,9 +33,9 @@ import java.util.stream.Collectors;
  * </ol>
  *
  * <p>
- * Unlike the {@link OptimizedAutoConfigurationEnvironmentPostProcessor} approach of
- * setting {@code spring.autoconfigure.exclude}, this filter operates directly inside
- * Spring Boot's {@code AutoConfigurationImportSelector} pipeline. As a result:
+ * Unlike the {@code spring.autoconfigure.exclude} approach of setting exclusions via an
+ * {@code EnvironmentPostProcessor}, this filter operates directly inside Spring Boot's
+ * {@code AutoConfigurationImportSelector} pipeline. As a result:
  * <ul>
  * <li>The list of auto-configuration candidates is loaded only once by Spring Boot (no
  * duplicate loading)</li>
@@ -63,6 +63,10 @@ public class OptimizedAutoConfigurationImportFilter
 		implements AutoConfigurationImportFilter, BeanClassLoaderAware, EnvironmentAware {
 
 	private static final Logger log = LoggerFactory.getLogger(OptimizedAutoConfigurationImportFilter.class);
+
+	static final String OPTIMIZER_PROPERTIES_FILE = "META-INF/autoconfiguration-optimizer.properties";
+
+	static final String LOADED_CONFIGURATIONS_KEY = "autoconfiguration.optimizer.loaded-configurations";
 
 	private ClassLoader classLoader;
 
@@ -179,14 +183,13 @@ public class OptimizedAutoConfigurationImportFilter
 	private Set<String> loadAllowedConfigurations() {
 		ClassLoader loader = this.classLoader != null ? this.classLoader
 				: Thread.currentThread().getContextClassLoader();
-		Resource resource = new ClassPathResource(
-				OptimizedAutoConfigurationEnvironmentPostProcessor.OPTIMIZER_PROPERTIES_FILE, loader);
+		Resource resource = new ClassPathResource(OPTIMIZER_PROPERTIES_FILE, loader);
 
 		if (!resource.exists()) {
 			log.debug(
 					"Spring Boot Autoconfiguration Optimizer: No training file found at classpath:{}. "
 							+ "Running with all auto-configurations.",
-					OptimizedAutoConfigurationEnvironmentPostProcessor.OPTIMIZER_PROPERTIES_FILE);
+					OPTIMIZER_PROPERTIES_FILE);
 			return null;
 		}
 
@@ -196,8 +199,7 @@ public class OptimizedAutoConfigurationImportFilter
 				props.load(inputStream);
 			}
 
-			String loadedConfigsValue = props
-				.getProperty(OptimizedAutoConfigurationEnvironmentPostProcessor.LOADED_CONFIGURATIONS_KEY);
+			String loadedConfigsValue = props.getProperty(LOADED_CONFIGURATIONS_KEY);
 
 			if (loadedConfigsValue == null || loadedConfigsValue.isBlank()) {
 				log.warn(
