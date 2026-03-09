@@ -166,9 +166,12 @@ Combine the optimizer with AppCDS for maximum startup time reduction:
 
 | Spring Boot | Java | Status |
 |---|---|---|
-| 4.0.x | 17, 21, 24 | ✅ Supported |
-| 3.4.x | 17, 21, 24 | ✅ Supported |
+| 4.0.x | 21, 25, 26 | 🔬 Milestone (RC2) |
+| 3.5.x | 17, 21, 25, 26 | ✅ Supported |
+| 3.4.x | 17, 21 | ✅ Supported |
 | 3.3.x | 17, 21 | ✅ Supported |
+
+> **Spring Boot 4.0** requires **Java 21 minimum**. Enable testing via `mvn verify -Pspring-boot-4`.
 
 ## Running Benchmarks
 

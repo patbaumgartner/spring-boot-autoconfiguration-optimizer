@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '17', '21', '24' ]
+        java: [ '17', '21', '25', '26' ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '17', '21', '24' ]
+        java: [ '17', '21', '25', '26' ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -76,7 +76,7 @@ jobs:
     needs: build-maven
     strategy:
       matrix:
-        java: [ '17', '21' ]
+        java: [ '17', '21', '25', '26' ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -115,3 +115,37 @@ jobs:
 
       - name: Run Maven Checkstyle
         run: mvn --batch-mode --no-transfer-progress checkstyle:check -Dcheckstyle.failOnViolation=false || true
+
+  spring-boot-4-compat:
+    name: Spring Boot 4 Compatibility (Java ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    # Run on pushes to main/release branches; allowed to fail (milestone build)
+    if: github.event_name == 'push'
+    continue-on-error: true
+    strategy:
+      matrix:
+        java: [ '21', '25', '26' ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Spring Boot 4 profile
+        run: mvn --batch-mode --no-transfer-progress verify -Pspring-boot-4
+        env:
+          # Suppress Spring Boot banner in test output
+          SPRING_MAIN_BANNER_MODE: "off"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sb4-test-results-java${{ matrix.java }}
+          path: '**/target/surefire-reports/*.xml'
+          retention-days: 7
