@@ -1,228 +1,230 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.fortytwotalents</groupId>
-    <artifactId>spring-boot-autoconfiguration-optimizer-parent</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
-    <packaging>pom</packaging>
+  <groupId>com.fortytwotalents</groupId>
+  <artifactId>spring-boot-autoconfiguration-optimizer-parent</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
 
-    <name>Spring Boot Autoconfiguration Optimizer - Parent</name>
-    <description>Analyzes and optimizes Spring Boot auto-configurations to improve startup time</description>
+  <name>Spring Boot Autoconfiguration Optimizer - Parent</name>
+  <description>Analyzes and optimizes Spring Boot auto-configurations to improve startup time</description>
+
+  <modules>
+    <module>autoconfiguration-optimizer-core</module>
+    <module>spring-boot-autoconfiguration-optimizer-maven-plugin</module>
+    <module>integration-tests</module>
+    <module>benchmarks</module>
+  </modules>
+
+  <properties>
+    <java.version>17</java.version>
+    <maven.compiler.release>17</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <spring-boot.version>4.0.3</spring-boot.version>
+    <!-- Pin assertj to the patched version (CVE: XXE in isXmlEqualTo, fixed in 3.27.7) -->
+    <assertj.version>3.27.7</assertj.version>
+    <maven-plugin-api.version>3.9.9</maven-plugin-api.version>
+    <maven-plugin-annotations.version>3.15.1</maven-plugin-annotations.version>
+
+    <!-- Plugin versions -->
+    <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
+    <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
+    <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
+    <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
+    <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
+    <maven-plugin-plugin.version>3.15.2</maven-plugin-plugin.version>
+    <central-publishing-maven-plugin.version>0.10.0</central-publishing-maven-plugin.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.fortytwotalents</groupId>
+        <artifactId>autoconfiguration-optimizer-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fortytwotalents</groupId>
+        <artifactId>autoconfiguration-optimizer-petclinic-sample</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${maven-compiler-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${maven-surefire-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>${maven-source-plugin.version}</version>
+          <executions>
+            <execution>
+              <id>attach-sources</id>
+              <goals>
+                <goal>jar-no-fork</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>${maven-javadoc-plugin.version}</version>
+          <executions>
+            <execution>
+              <id>attach-javadocs</id>
+              <goals>
+                <goal>jar</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-gpg-plugin</artifactId>
+          <version>${maven-gpg-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-plugin-plugin</artifactId>
+          <version>${maven-plugin-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.sonatype.central</groupId>
+          <artifactId>central-publishing-maven-plugin</artifactId>
+          <version>${central-publishing-maven-plugin.version}</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+  <url>https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer</url>
+  <inceptionYear>2026</inceptionYear>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>patbaumgartner</id>
+      <name>Patrick Baumgartner</name>
+      <email>contact@patbaumgartner.com</email>
+      <url>https://github.com/patbaumgartner</url>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:git://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer.git</developerConnection>
     <url>https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer</url>
-    <inceptionYear>2026</inceptionYear>
+    <tag>HEAD</tag>
+  </scm>
 
-    <licenses>
-        <license>
-            <name>Apache License, Version 2.0</name>
-            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
-        </license>
-    </licenses>
+  <issueManagement>
+    <system>GitHub</system>
+    <url>https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/issues</url>
+  </issueManagement>
 
-    <developers>
-        <developer>
-            <id>patbaumgartner</id>
-            <name>Patrick Baumgartner</name>
-            <email>contact@patbaumgartner.com</email>
-            <url>https://github.com/patbaumgartner</url>
-        </developer>
-    </developers>
+  <repositories>
+    <repository>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <id>spring-milestones</id>
+      <name>Spring Milestones</name>
+      <url>https://repo.spring.io/milestone</url>
+    </repository>
+  </repositories>
 
-    <scm>
-        <url>https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer</url>
-        <connection>scm:git:git://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer.git</developerConnection>
-        <tag>HEAD</tag>
-    </scm>
+  <pluginRepositories>
+    <pluginRepository>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <id>spring-milestones</id>
+      <name>Spring Milestones</name>
+      <url>https://repo.spring.io/milestone</url>
+    </pluginRepository>
+  </pluginRepositories>
 
-    <issueManagement>
-        <system>GitHub</system>
-        <url>https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/issues</url>
-    </issueManagement>
-
-    <modules>
-        <module>autoconfiguration-optimizer-core</module>
-        <module>spring-boot-autoconfiguration-optimizer-maven-plugin</module>
-        <module>integration-tests</module>
-        <module>benchmarks</module>
-    </modules>
-
-    <properties>
-        <java.version>21</java.version>
-        <maven.compiler.release>21</maven.compiler.release>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-
-        <spring-boot.version>4.0.3</spring-boot.version>
-        <!-- Pin assertj to the patched version (CVE: XXE in isXmlEqualTo, fixed in 3.27.7) -->
-        <assertj.version>3.27.7</assertj.version>
-        <maven-plugin-api.version>3.9.9</maven-plugin-api.version>
-        <maven-plugin-annotations.version>3.15.1</maven-plugin-annotations.version>
-
-        <!-- Plugin versions -->
-        <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
-        <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
-        <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
-        <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
-        <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
-        <maven-plugin-plugin.version>3.15.2</maven-plugin-plugin.version>
-        <central-publishing-maven-plugin.version>0.10.0</central-publishing-maven-plugin.version>
-    </properties>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>${spring-boot.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.fortytwotalents</groupId>
-                <artifactId>autoconfiguration-optimizer-core</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.fortytwotalents</groupId>
-                <artifactId>autoconfiguration-optimizer-petclinic-sample</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
-    <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>${maven-compiler-plugin.version}</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>${maven-surefire-plugin.version}</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-source-plugin</artifactId>
-                    <version>${maven-source-plugin.version}</version>
-                    <executions>
-                        <execution>
-                            <id>attach-sources</id>
-                            <goals>
-                                <goal>jar-no-fork</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>${maven-javadoc-plugin.version}</version>
-                    <executions>
-                        <execution>
-                            <id>attach-javadocs</id>
-                            <goals>
-                                <goal>jar</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-gpg-plugin</artifactId>
-                    <version>${maven-gpg-plugin.version}</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-plugin-plugin</artifactId>
-                    <version>${maven-plugin-plugin.version}</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.sonatype.central</groupId>
-                    <artifactId>central-publishing-maven-plugin</artifactId>
-                    <version>${central-publishing-maven-plugin.version}</version>
-                </plugin>
-            </plugins>
-        </pluginManagement>
+  <profiles>
+    <profile>
+      <id>release</id>
+      <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-            </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+                <phase>verify</phase>
+                <configuration>
+                  <gpgArguments>
+                    <arg>--pinentry-mode</arg>
+                    <arg>loopback</arg>
+                  </gpgArguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+              <autoPublish>true</autoPublish>
+              <waitUntil>published</waitUntil>
+            </configuration>
+          </plugin>
         </plugins>
-    </build>
-
-    <repositories>
-        <repository>
-            <id>spring-milestones</id>
-            <name>Spring Milestones</name>
-            <url>https://repo.spring.io/milestone</url>
-            <snapshots><enabled>false</enabled></snapshots>
-        </repository>
-    </repositories>
-
-    <pluginRepositories>
-        <pluginRepository>
-            <id>spring-milestones</id>
-            <name>Spring Milestones</name>
-            <url>https://repo.spring.io/milestone</url>
-            <snapshots><enabled>false</enabled></snapshots>
-        </pluginRepository>
-    </pluginRepositories>
-
-    <profiles>
-        <profile>
-            <id>release</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-source-plugin</artifactId>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-javadoc-plugin</artifactId>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                                <configuration>
-                                    <gpgArguments>
-                                        <arg>--pinentry-mode</arg>
-                                        <arg>loopback</arg>
-                                    </gpgArguments>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.sonatype.central</groupId>
-                        <artifactId>central-publishing-maven-plugin</artifactId>
-                        <extensions>true</extensions>
-                        <configuration>
-                            <publishingServerId>central</publishingServerId>
-                            <autoPublish>true</autoPublish>
-                            <waitUntil>published</waitUntil>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
+      </build>
+    </profile>
+  </profiles>
 </project>

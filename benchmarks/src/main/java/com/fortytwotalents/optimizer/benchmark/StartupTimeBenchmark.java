@@ -29,111 +29,110 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * JMH benchmark that measures Spring Boot application startup time with and without
- * the autoconfiguration optimizer.
+ * JMH benchmark that measures Spring Boot application startup time with and without the
+ * autoconfiguration optimizer.
  *
- * <p>This benchmark:
+ * <p>
+ * This benchmark:
  * <ol>
- *   <li>Starts the PetClinic sample application without optimization (baseline)</li>
- *   <li>Starts the PetClinic sample application with the optimizer enabled</li>
- *   <li>Reports the startup time difference</li>
+ * <li>Starts the PetClinic sample application without optimization (baseline)</li>
+ * <li>Starts the PetClinic sample application with the optimizer enabled</li>
+ * <li>Reports the startup time difference</li>
  * </ol>
  *
- * <p>Run via: {@code java -jar target/benchmarks.jar}
+ * <p>
+ * Run via: {@code java -jar target/benchmarks.jar}
  */
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Warmup(iterations = 3, time = 1)
 @Measurement(iterations = 5, time = 1)
-@Fork(value = 1, jvmArgsAppend = {"-Xmx256m"})
+@Fork(value = 1, jvmArgsAppend = { "-Xmx256m" })
 public class StartupTimeBenchmark {
 
-    private static final Pattern STARTED_PATTERN = Pattern.compile(
-            "Started .+ in ([\\d.]+) seconds");
+	private static final Pattern STARTED_PATTERN = Pattern.compile("Started .+ in ([\\d.]+) seconds");
 
-    private String javaExecutable;
-    private String petclinicJar;
+	private String javaExecutable;
 
-    @Setup
-    public void setup() {
-        javaExecutable = Paths.get(System.getProperty("java.home"), "bin", "java").toString();
+	private String petclinicJar;
 
-        // Find the PetClinic JAR
-        String jarPath = System.getProperty("petclinic.jar");
-        if (jarPath != null && new File(jarPath).exists()) {
-            petclinicJar = jarPath;
-        }
-    }
+	@Setup
+	public void setup() {
+		javaExecutable = Paths.get(System.getProperty("java.home"), "bin", "java").toString();
 
-    /**
-     * Measures startup time without the autoconfiguration optimizer (baseline).
-     */
-    @Benchmark
-    public double baselineStartup() throws IOException, InterruptedException {
-        return measureStartupTime(List.of(
-                "-Dautoconfiguration.optimizer.enabled=false"
-        ));
-    }
+		// Find the PetClinic JAR
+		String jarPath = System.getProperty("petclinic.jar");
+		if (jarPath != null && new File(jarPath).exists()) {
+			petclinicJar = jarPath;
+		}
+	}
 
-    /**
-     * Measures startup time with the autoconfiguration optimizer enabled.
-     */
-    @Benchmark
-    public double optimizedStartup() throws IOException, InterruptedException {
-        return measureStartupTime(List.of(
-                "-Dautoconfiguration.optimizer.enabled=true"
-        ));
-    }
+	/**
+	 * Measures startup time without the autoconfiguration optimizer (baseline).
+	 */
+	@Benchmark
+	public double baselineStartup() throws IOException, InterruptedException {
+		return measureStartupTime(List.of("-Dautoconfiguration.optimizer.enabled=false"));
+	}
 
-    private double measureStartupTime(List<String> extraArgs) throws IOException, InterruptedException {
-        if (petclinicJar == null) {
-            return -1;
-        }
+	/**
+	 * Measures startup time with the autoconfiguration optimizer enabled.
+	 */
+	@Benchmark
+	public double optimizedStartup() throws IOException, InterruptedException {
+		return measureStartupTime(List.of("-Dautoconfiguration.optimizer.enabled=true"));
+	}
 
-        List<String> command = new ArrayList<>();
-        command.add(javaExecutable);
-        command.addAll(extraArgs);
-        command.add("-jar");
-        command.add(petclinicJar);
-        command.add("--spring.main.banner-mode=off");
-        command.add("--server.port=0");
+	private double measureStartupTime(List<String> extraArgs) throws IOException, InterruptedException {
+		if (petclinicJar == null) {
+			return -1;
+		}
 
-        ProcessBuilder pb = new ProcessBuilder(command);
-        pb.redirectErrorStream(true);
-        Process process = pb.start();
+		List<String> command = new ArrayList<>();
+		command.add(javaExecutable);
+		command.addAll(extraArgs);
+		command.add("-jar");
+		command.add(petclinicJar);
+		command.add("--spring.main.banner-mode=off");
+		command.add("--server.port=0");
 
-        double startupTime = -1;
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                Matcher matcher = STARTED_PATTERN.matcher(line);
-                if (matcher.find()) {
-                    startupTime = Double.parseDouble(matcher.group(1)) * 1000;
-                    break;
-                }
-            }
-        } finally {
-            process.destroyForcibly();
-        }
+		ProcessBuilder pb = new ProcessBuilder(command);
+		pb.redirectErrorStream(true);
+		Process process = pb.start();
 
-        return startupTime;
-    }
+		double startupTime = -1;
+		try (BufferedReader reader = new BufferedReader(
+				new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+			String line;
+			while ((line = reader.readLine()) != null) {
+				Matcher matcher = STARTED_PATTERN.matcher(line);
+				if (matcher.find()) {
+					startupTime = Double.parseDouble(matcher.group(1)) * 1000;
+					break;
+				}
+			}
+		}
+		finally {
+			process.destroyForcibly();
+		}
 
-    /**
-     * Main method to run the benchmarks programmatically.
-     */
-    public static void main(String[] args) throws Exception {
-        Options opt = new OptionsBuilder()
-                .include(StartupTimeBenchmark.class.getSimpleName())
-                .warmupIterations(3)
-                .measurementIterations(5)
-                .forks(1)
-                .resultFormat(ResultFormatType.JSON)
-                .result("benchmark-results.json")
-                .build();
+		return startupTime;
+	}
 
-        new Runner(opt).run();
-    }
+	/**
+	 * Main method to run the benchmarks programmatically.
+	 */
+	public static void main(String[] args) throws Exception {
+		Options opt = new OptionsBuilder().include(StartupTimeBenchmark.class.getSimpleName())
+			.warmupIterations(3)
+			.measurementIterations(5)
+			.forks(1)
+			.resultFormat(ResultFormatType.JSON)
+			.result("benchmark-results.json")
+			.build();
+
+		new Runner(opt).run();
+	}
+
 }

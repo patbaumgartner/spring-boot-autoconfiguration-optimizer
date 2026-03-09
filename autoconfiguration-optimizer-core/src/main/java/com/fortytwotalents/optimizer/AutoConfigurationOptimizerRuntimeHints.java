@@ -8,34 +8,34 @@ import org.springframework.lang.Nullable;
 /**
  * {@link RuntimeHintsRegistrar} for the Spring Boot Autoconfiguration Optimizer.
  *
- * <p>Registers hints required for GraalVM native image compilation:
+ * <p>
+ * Registers hints required for GraalVM native image compilation:
  * <ul>
- *   <li>The optimizer properties file as a classpath resource</li>
- *   <li>Reflection hints for the {@link OptimizedAutoConfigurationEnvironmentPostProcessor}</li>
+ * <li>The optimizer properties file as a classpath resource</li>
+ * <li>Reflection hints for the
+ * {@link OptimizedAutoConfigurationEnvironmentPostProcessor}</li>
  * </ul>
  */
 public class AutoConfigurationOptimizerRuntimeHints implements RuntimeHintsRegistrar {
 
-    @Override
-    public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
-        // Register the optimizer properties file so it's included in the native image
-        hints.resources().registerPattern(
-                OptimizedAutoConfigurationEnvironmentPostProcessor.OPTIMIZER_PROPERTIES_FILE);
+	@Override
+	public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
+		// Register the optimizer properties file so it's included in the native image
+		hints.resources().registerPattern(OptimizedAutoConfigurationEnvironmentPostProcessor.OPTIMIZER_PROPERTIES_FILE);
 
-        // Register the AutoConfiguration.imports files so they're readable at runtime
-        hints.resources().registerPattern(
-                "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports");
+		// Register the AutoConfiguration.imports files so they're readable at runtime
+		hints.resources()
+			.registerPattern("META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports");
 
-        // Register reflection for the EnvironmentPostProcessor so it can be instantiated
-        hints.reflection().registerType(
-                OptimizedAutoConfigurationEnvironmentPostProcessor.class,
-                MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS,
-                MemberCategory.INVOKE_PUBLIC_METHODS);
+		// Register reflection for the EnvironmentPostProcessor so it can be instantiated
+		hints.reflection()
+			.registerType(OptimizedAutoConfigurationEnvironmentPostProcessor.class,
+					MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS, MemberCategory.INVOKE_PUBLIC_METHODS);
 
-        // Register reflection for the TrainingRunApplicationListener
-        hints.reflection().registerType(
-                TrainingRunApplicationListener.class,
-                MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS,
-                MemberCategory.INVOKE_PUBLIC_METHODS);
-    }
+		// Register reflection for the TrainingRunApplicationListener
+		hints.reflection()
+			.registerType(TrainingRunApplicationListener.class, MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS,
+					MemberCategory.INVOKE_PUBLIC_METHODS);
+	}
+
 }

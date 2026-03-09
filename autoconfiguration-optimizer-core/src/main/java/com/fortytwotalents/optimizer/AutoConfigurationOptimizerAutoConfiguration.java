@@ -11,7 +11,8 @@ import org.springframework.context.annotation.ImportRuntimeHints;
 /**
  * Auto-configuration for the Spring Boot Autoconfiguration Optimizer.
  *
- * <p>Registers the {@link TrainingRunApplicationListener} when training mode is enabled
+ * <p>
+ * Registers the {@link TrainingRunApplicationListener} when training mode is enabled
  * ({@code autoconfiguration.optimizer.training-run=true}).
  */
 @AutoConfiguration
@@ -19,20 +20,19 @@ import org.springframework.context.annotation.ImportRuntimeHints;
 @ImportRuntimeHints(AutoConfigurationOptimizerRuntimeHints.class)
 public class AutoConfigurationOptimizerAutoConfiguration {
 
-    /**
-     * Creates the {@link TrainingRunApplicationListener} bean that records loaded
-     * auto-configurations during a training run.
-     *
-     * @param properties              optimizer properties
-     * @param conditionEvaluationReport Spring Boot's condition evaluation report
-     * @return the training run listener
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "autoconfiguration.optimizer", name = "training-run", havingValue = "true")
-    public TrainingRunApplicationListener trainingRunApplicationListener(
-            AutoConfigurationOptimizerProperties properties,
-            ConditionEvaluationReport conditionEvaluationReport) {
-        return new TrainingRunApplicationListener(properties, conditionEvaluationReport);
-    }
+	/**
+	 * Creates the {@link TrainingRunApplicationListener} bean that records loaded
+	 * auto-configurations during a training run.
+	 * @param properties optimizer properties
+	 * @param conditionEvaluationReport Spring Boot's condition evaluation report
+	 * @return the training run listener
+	 */
+	@Bean
+	@ConditionalOnMissingBean
+	@ConditionalOnProperty(prefix = "autoconfiguration.optimizer", name = "training-run", havingValue = "true")
+	public TrainingRunApplicationListener trainingRunApplicationListener(
+			AutoConfigurationOptimizerProperties properties, ConditionEvaluationReport conditionEvaluationReport) {
+		return new TrainingRunApplicationListener(properties, conditionEvaluationReport);
+	}
+
 }

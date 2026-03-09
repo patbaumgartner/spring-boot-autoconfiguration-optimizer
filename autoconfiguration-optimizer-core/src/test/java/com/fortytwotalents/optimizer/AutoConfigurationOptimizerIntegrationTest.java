@@ -10,33 +10,30 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Integration tests verifying the autoconfiguration optimizer in training mode.
  */
-@SpringBootTest(
-    classes = AutoConfigurationOptimizerIntegrationTest.TestApp.class,
-    properties = {
-        "autoconfiguration.optimizer.training-run=true",
-        "autoconfiguration.optimizer.exit-after-training=false"
-    }
-)
+@SpringBootTest(classes = AutoConfigurationOptimizerIntegrationTest.TestApp.class, properties = {
+		"autoconfiguration.optimizer.training-run=true", "autoconfiguration.optimizer.exit-after-training=false" })
 class AutoConfigurationOptimizerIntegrationTest {
 
-    @Autowired
-    private AutoConfigurationOptimizerProperties properties;
+	@Autowired
+	private AutoConfigurationOptimizerProperties properties;
 
-    @Autowired(required = false)
-    private TrainingRunApplicationListener trainingRunApplicationListener;
+	@Autowired(required = false)
+	private TrainingRunApplicationListener trainingRunApplicationListener;
 
-    @Test
-    void trainingRunListenerIsRegisteredWhenTrainingModeEnabled() {
-        assertThat(trainingRunApplicationListener).isNotNull();
-    }
+	@Test
+	void trainingRunListenerIsRegisteredWhenTrainingModeEnabled() {
+		assertThat(trainingRunApplicationListener).isNotNull();
+	}
 
-    @Test
-    void propertiesAreLoaded() {
-        assertThat(properties).isNotNull();
-        assertThat(properties.isTrainingRun()).isTrue();
-    }
+	@Test
+	void propertiesAreLoaded() {
+		assertThat(properties).isNotNull();
+		assertThat(properties.isTrainingRun()).isTrue();
+	}
 
-    @SpringBootApplication
-    static class TestApp {
-    }
+	@SpringBootApplication
+	static class TestApp {
+
+	}
+
 }
