@@ -2,35 +2,48 @@
 
 [![CI](https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/actions/workflows/ci.yml/badge.svg)](https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/actions/workflows/ci.yml)
 [![Benchmarks](https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/actions/workflows/benchmarks.yml/badge.svg)](https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/actions/workflows/benchmarks.yml)
-[![CodeQL](https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/actions/workflows/codeql.yml/badge.svg)](https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/actions/workflows/codeql.yml)
 [![Maven Central](https://img.shields.io/maven-central/v/com.fortytwotalents/autoconfiguration-optimizer-core.svg?label=Maven%20Central)](https://search.maven.org/artifact/com.fortytwotalents/autoconfiguration-optimizer-core)
 [![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/com.fortytwotalents.autoconfiguration-optimizer.svg)](https://plugins.gradle.org/plugin/com.fortytwotalents.autoconfiguration-optimizer)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Java](https://img.shields.io/badge/Java-17%2B-orange.svg)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
 
-> **Dramatically reduce Spring Boot startup time** by automatically detecting and excluding unused auto-configurations via a training run approach.
+> Reduce Spring Boot startup time by automatically detecting and excluding unused auto-configurations using a one-time training run.
+
+## Why Bother?
+
+Spring Boot evaluates hundreds of `@Conditional` annotations at every startup — even for auto-configurations that will never apply to your application. This optimizer records which ones actually matched during a training run and permanently skips the rest on every subsequent start.
+
+The result: fewer condition evaluations, faster startup, and zero changes to your application code.
+
+## How It Works
+
+1. **Training Run** — Start your application once with training mode enabled. The optimizer captures every auto-configuration that passed its conditions and writes the list to `META-INF/autoconfiguration-optimizer.properties`.
+2. **Subsequent Starts** — An `EnvironmentPostProcessor` reads the file at startup and adds all unused auto-configurations to `spring.autoconfigure.exclude` before the context is even created.
+3. **Safe by Default** — If the file is missing (e.g., during development without the training step), the optimizer does nothing and Spring Boot starts as usual.
+
+```
+Training Run                    Production Run
+────────────────                ──────────────────────────────────
+App starts normally             EnvironmentPostProcessor reads
+with all auto-configs           META-INF/autoconfiguration-
+                                optimizer.properties
+ConditionEvaluationReport                  │
+records matched configs         Sets spring.autoconfigure.exclude
+                                for all configs NOT in the list
+Writes                                     │
+autoconfiguration-              Spring Boot skips condition
+optimizer.properties            evaluation for excluded configs
+```
 
 ## 🚀 Benchmark Results
 
-Latest benchmark results running against a [Spring PetClinic](integration-tests/petclinic-sample)-like application (Web + JPA + Actuator + Cache + Validation):
+Startup time benchmarks run automatically on every push to `main` against a [PetClinic](integration-tests/petclinic-sample)-like application (Web + JPA + Actuator + Cache + Validation) using Java 21 on GitHub Actions runners.
 
-> See the [latest benchmark report](../../actions/workflows/benchmarks.yml) in GitHub Actions for up-to-date numbers.
+> **[View the latest benchmark report →](../../actions/workflows/benchmarks.yml)**  
+> Download the `benchmark-report` artifact from the most recent successful run for exact numbers.
 
-| Configuration | Startup Time | Improvement |
-|---|---|---|
-| Baseline (no optimizer) | ~2500ms | — |
-| With optimizer | ~1600ms | ~36% faster |
-
-*Numbers are illustrative; see the CI benchmark artifacts for exact measurements on your setup.*
-
-## What It Does
-
-Spring Boot loads hundreds of auto-configurations at startup. Most are filtered out by their `@Conditional` annotations, but the filtering itself takes time. This optimizer:
-
-1. **Training Run**: Starts your application once and records which auto-configurations **actually passed** their conditions.
-2. **Optimization**: On subsequent starts, directly excludes all unused auto-configurations via `spring.autoconfigure.exclude`, skipping the condition evaluation entirely.
-3. **Zero Dev Impact**: During development (no properties file present), all auto-configurations run normally.
+The actual improvement depends on how many Spring Boot starters your application uses. The more auto-configurations Spring Boot has to evaluate at startup, the more you gain.
 
 ## Quick Start
 
@@ -72,14 +85,13 @@ Spring Boot loads hundreds of auto-configurations at startup. Most are filtered 
 </plugin>
 ```
 
-Or run manually:
+Or run the training goal directly:
 
 ```bash
-# Run the training run
 mvn com.fortytwotalents:spring-boot-autoconfiguration-optimizer-maven-plugin:train \
   -Dautoconfiguration.optimizer.mainClass=com.example.MyApplication
 
-# This generates src/main/resources/META-INF/autoconfiguration-optimizer.properties
+# Generates src/main/resources/META-INF/autoconfiguration-optimizer.properties
 # Commit this file to your repository!
 ```
 
@@ -105,24 +117,7 @@ autoconfigurationOptimizer {
 ```
 
 ```bash
-# Run the training run
 ./gradlew trainAutoconfiguration copyAutoconfigurationOptimizerFile
-```
-
-## How It Works
-
-```
-Training Run                    Production Run
-────────────────                ────────────────────────────────
-Application starts              EnvironmentPostProcessor reads
-with all auto-configs     →     META-INF/autoconfiguration-optimizer.properties
-                                            │
-ConditionEvaluationReport       Sets spring.autoconfigure.exclude
-records matched configs   →     for all configs NOT in the list
-                                            │
-Writes                          Spring Boot skips condition
-autoconfiguration-              evaluation for excluded configs
-optimizer.properties
 ```
 
 ## GraalVM Native Image & AOT Support
@@ -185,22 +180,21 @@ mvn -Pnative native:compile                   # 3. Native compilation
 
 > **Spring Boot 4.0** requires **Java 21 minimum** and is the default target for this library.
 
-## Running Benchmarks
+## Running Benchmarks Locally
 
 ```bash
 # Build everything
 mvn package -DskipTests
 
-# Run benchmarks (requires built PetClinic JAR)
-chmod +x benchmarks/scripts/run-benchmarks.sh
+# Run benchmarks
 ./benchmarks/scripts/run-benchmarks.sh \
   integration-tests/petclinic-sample/target/autoconfiguration-optimizer-petclinic-sample-*.jar
 
-# View report
+# View the report
 cat benchmarks/results/benchmark-report.md
 ```
 
-Benchmark reports are also generated automatically in CI and available as [GitHub Actions artifacts](../../actions/workflows/benchmarks.yml).
+Benchmarks also run automatically in CI on every push to `main` and results are available as [GitHub Actions artifacts](../../actions/workflows/benchmarks.yml).
 
 ## Project Structure
 
