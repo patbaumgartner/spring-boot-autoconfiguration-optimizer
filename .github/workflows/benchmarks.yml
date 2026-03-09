@@ -69,13 +69,31 @@ jobs:
           TOTAL=0
           COUNT=0
           for i in $(seq 1 ${{ github.event.inputs.iterations || '5' }}); do
-            OUTPUT=$(timeout 60 java \
+            TMPFILE=$(mktemp)
+            java \
               -Dautoconfiguration.optimizer.enabled=false \
               -jar integration-tests/petclinic-sample/target/autoconfiguration-optimizer-petclinic-sample-*.jar \
               --spring.main.banner-mode=off \
               --server.port=0 \
-              --spring.jpa.show-sql=false 2>&1 | \
-              grep -m1 "Started .* in" || true)
+              --spring.jpa.show-sql=false > "${TMPFILE}" 2>&1 &
+            JAVA_PID=$!
+
+            OUTPUT=""
+            END_TIME=$(($(date +%s) + 60))
+            while [ "$(date +%s)" -lt "${END_TIME}" ]; do
+              OUTPUT=$(grep -m1 "Started .* in" "${TMPFILE}" 2>/dev/null || true)
+              if [ -n "${OUTPUT}" ]; then break; fi
+              if ! kill -0 "${JAVA_PID}" 2>/dev/null; then
+                # Process exited; do one final check before leaving the loop
+                OUTPUT=$(grep -m1 "Started .* in" "${TMPFILE}" 2>/dev/null || true)
+                break
+              fi
+              sleep 0.5
+            done
+
+            kill "${JAVA_PID}" 2>/dev/null || true
+            wait "${JAVA_PID}" 2>/dev/null || true
+            rm -f "${TMPFILE}"
 
             SECONDS_VAL=$(echo "${OUTPUT}" | grep -oP 'in \K[\d.]+(?= seconds)' || echo "")
             if [ -n "${SECONDS_VAL}" ]; then
@@ -98,12 +116,30 @@ jobs:
           TOTAL=0
           COUNT=0
           for i in $(seq 1 ${{ github.event.inputs.iterations || '5' }}); do
-            OUTPUT=$(timeout 60 java \
+            TMPFILE=$(mktemp)
+            java \
               -jar integration-tests/petclinic-sample/target/autoconfiguration-optimizer-petclinic-sample-*.jar \
               --spring.main.banner-mode=off \
               --server.port=0 \
-              --spring.jpa.show-sql=false 2>&1 | \
-              grep -m1 "Started .* in" || true)
+              --spring.jpa.show-sql=false > "${TMPFILE}" 2>&1 &
+            JAVA_PID=$!
+
+            OUTPUT=""
+            END_TIME=$(($(date +%s) + 60))
+            while [ "$(date +%s)" -lt "${END_TIME}" ]; do
+              OUTPUT=$(grep -m1 "Started .* in" "${TMPFILE}" 2>/dev/null || true)
+              if [ -n "${OUTPUT}" ]; then break; fi
+              if ! kill -0 "${JAVA_PID}" 2>/dev/null; then
+                # Process exited; do one final check before leaving the loop
+                OUTPUT=$(grep -m1 "Started .* in" "${TMPFILE}" 2>/dev/null || true)
+                break
+              fi
+              sleep 0.5
+            done
+
+            kill "${JAVA_PID}" 2>/dev/null || true
+            wait "${JAVA_PID}" 2>/dev/null || true
+            rm -f "${TMPFILE}"
 
             SECONDS_VAL=$(echo "${OUTPUT}" | grep -oP 'in \K[\d.]+(?= seconds)' || echo "")
             if [ -n "${SECONDS_VAL}" ]; then

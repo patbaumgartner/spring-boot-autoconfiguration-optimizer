@@ -8,3 +8,6 @@ build/
 !**/gradle/wrapper/gradle-wrapper.jar
 autoconfiguration-optimizer-core/autoconfiguration-optimizer.properties
 *.bak
+BOOT-INF/
+benchmarks/dependency-reduced-pom.xml
+integration-tests/petclinic-sample/src/main/resources/META-INF/autoconfiguration-optimizer.properties
