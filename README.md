@@ -9,7 +9,7 @@
 [![Java](https://img.shields.io/badge/Java-17%2B-orange.svg)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
 
-> **Dramatically reduce Spring Boot startup time** by automatically detecting and excluding unused auto-configurations — inspired by the Paketo Spring Boot buildpack's training run approach.
+> **Dramatically reduce Spring Boot startup time** by automatically detecting and excluding unused auto-configurations via a training run approach.
 
 ## 🚀 Benchmark Results
 
@@ -31,8 +31,6 @@ Spring Boot loads hundreds of auto-configurations at startup. Most are filtered 
 1. **Training Run**: Starts your application once and records which auto-configurations **actually passed** their conditions.
 2. **Optimization**: On subsequent starts, directly excludes all unused auto-configurations via `spring.autoconfigure.exclude`, skipping the condition evaluation entirely.
 3. **Zero Dev Impact**: During development (no properties file present), all auto-configurations run normally.
-
-This is the same approach used by the [Paketo Spring Boot buildpack](https://github.com/paketo-buildpacks/spring-boot) via `TRAINING_RUN_JAVA_TOOL_OPTIONS`.
 
 ## Quick Start
 
@@ -57,7 +55,19 @@ This is the same approach used by the [Paketo Spring Boot buildpack](https://git
         </execution>
     </executions>
     <configuration>
+        <!-- Required: fully-qualified main class name.
+             Omit only if the project has a 'start-class' property or a single
+             @SpringBootApplication class that can be auto-detected in compiled output. -->
         <mainClass>com.example.MyApplication</mainClass>
+
+        <!-- Optional: extra JVM arguments passed to the training-run process -->
+        <jvmArguments>
+            <jvmArgument>-Xmx512m</jvmArgument>
+            <jvmArgument>-Dspring.profiles.active=training</jvmArgument>
+        </jvmArguments>
+
+        <!-- Optional: timeout in seconds (default: 120) -->
+        <timeout>120</timeout>
     </configuration>
 </plugin>
 ```
@@ -81,27 +91,22 @@ plugins {
 }
 
 autoconfigurationOptimizer {
+    // Required: fully-qualified main class name.
+    // Omit only when a single @SpringBootApplication class can be auto-detected
+    // in the compiled output.
     mainClass = 'com.example.MyApplication'
-    timeout = 120  // seconds
+
+    // Optional: extra JVM arguments passed to the training-run process
+    jvmArguments = ['-Xmx512m', '-Dspring.profiles.active=training']
+
+    // Optional: timeout in seconds (default: 120)
+    timeout = 120
 }
 ```
 
 ```bash
 # Run the training run
 ./gradlew trainAutoconfiguration copyAutoconfigurationOptimizerFile
-```
-
-### Using `TRAINING_RUN_JAVA_TOOL_OPTIONS` (Paketo-style)
-
-```bash
-# Set for the training run
-export TRAINING_RUN_JAVA_TOOL_OPTIONS="-Dautoconfiguration.optimizer.training-run=true \
-  -Dautoconfiguration.optimizer.exit-after-training=true \
-  -Dautoconfiguration.optimizer.output-directory=src/main/resources/META-INF \
-  -Dautoconfiguration.optimizer.output-file=autoconfiguration-optimizer.properties"
-
-# Start your application with these options
-java ${TRAINING_RUN_JAVA_TOOL_OPTIONS} -jar myapp.jar
 ```
 
 ## How It Works
@@ -137,6 +142,8 @@ mvn -Pnative native:compile                   # 3. Native compilation
 
 ## Configuration Reference
 
+### Core Library Properties
+
 | Property | Default | Description |
 |---|---|---|
 | `autoconfiguration.optimizer.enabled` | `true` | Enable/disable the optimizer |
@@ -144,6 +151,31 @@ mvn -Pnative native:compile                   # 3. Native compilation
 | `autoconfiguration.optimizer.output-file` | `autoconfiguration-optimizer.properties` | Output file name |
 | `autoconfiguration.optimizer.output-directory` | `.` | Output directory for training |
 | `autoconfiguration.optimizer.exit-after-training` | `false` | Exit JVM after training |
+
+### Maven Plugin Parameters (`train` goal)
+
+| Parameter | Property | Default | Description |
+|---|---|---|---|
+| `mainClass` | `autoconfiguration.optimizer.mainClass` | auto-detected | **Required** — fully-qualified main class. Auto-detected from `start-class` property or `@SpringBootApplication` scan when omitted. |
+| `jvmArguments` | `autoconfiguration.optimizer.jvmArguments` | _(none)_ | Additional JVM arguments passed to the training-run process. |
+| `jar` | `autoconfiguration.optimizer.jar` | _(none)_ | Spring Boot executable JAR to run. When set, `mainClass` is ignored. |
+| `timeout` | `autoconfiguration.optimizer.timeout` | `120` | Training run timeout in seconds. |
+| `targetDirectory` | `autoconfiguration.optimizer.targetDirectory` | `src/main/resources/META-INF` | Directory where the properties file is copied after training. |
+| `outputFile` | `autoconfiguration.optimizer.outputFile` | `autoconfiguration-optimizer.properties` | Name of the generated properties file. |
+| `workingDirectory` | `autoconfiguration.optimizer.workingDirectory` | `${project.build.directory}` | Working directory for the training process. |
+| `skip` | `autoconfiguration.optimizer.skip` | `false` | Skip the training run. |
+
+### Gradle Plugin Extension (`autoconfigurationOptimizer`)
+
+| Property | Default | Description |
+|---|---|---|
+| `mainClass` | auto-detected | **Required** — fully-qualified main class. Auto-detected from `@SpringBootApplication` scan when omitted. |
+| `jvmArguments` | _(none)_ | Additional JVM arguments passed to the training-run process. |
+| `jar` | _(none)_ | Spring Boot executable JAR to run. When set, `mainClass` is ignored. |
+| `timeout` | `120` | Training run timeout in seconds. |
+| `targetDirectory` | `src/main/resources/META-INF` | Directory where the properties file is copied after training. |
+| `outputFile` | `autoconfiguration-optimizer.properties` | Name of the generated properties file. |
+| `skip` | `false` | Skip the training run. |
 
 ## Spring Boot Compatibility
 
