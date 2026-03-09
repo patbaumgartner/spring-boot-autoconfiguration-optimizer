@@ -2,6 +2,7 @@ package com.fortytwotalents.optimizer.gradle;
 
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.ListProperty;
@@ -9,6 +10,7 @@ import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.PathSensitive;
@@ -54,6 +56,15 @@ public abstract class TrainTask extends DefaultTask {
     @Classpath
     @Optional
     public abstract ListProperty<File> getRuntimeClasspath();
+
+    /**
+     * The directories containing compiled class files to scan for the main class when
+     * neither {@code jar} nor {@code mainClass} is configured.
+     */
+    @InputFiles
+    @Classpath
+    @Optional
+    public abstract ConfigurableFileCollection getClassesDirectories();
 
     /**
      * Additional JVM arguments for the training run.
@@ -151,9 +162,40 @@ public abstract class TrainTask extends DefaultTask {
             }
             command.add(getMainClass().get());
         } else {
-            throw new GradleException("Either 'jar' or 'mainClass' must be configured for the trainAutoconfiguration task.");
+            // Try to auto-detect main class by scanning compiled class files
+            Iterable<File> dirsToScan = resolveClassesDirectoriesForScan();
+            java.util.Optional<String> detectedMainClass = MainClassFinder.findMainClass(dirsToScan);
+            if (detectedMainClass.isPresent()) {
+                String mainClassValue = detectedMainClass.get();
+                getLogger().lifecycle(
+                        "Spring Boot Autoconfiguration Optimizer: Auto-detected main class: {}",
+                        mainClassValue);
+                if (getRuntimeClasspath().isPresent() && !getRuntimeClasspath().get().isEmpty()) {
+                    String classpath = getRuntimeClasspath().get().stream()
+                            .map(File::getAbsolutePath)
+                            .collect(Collectors.joining(File.pathSeparator));
+                    command.add("-cp");
+                    command.add(classpath);
+                }
+                command.add(mainClassValue);
+            } else {
+                throw new GradleException(
+                        "Could not determine main class. Please configure 'mainClass', 'jar', or "
+                                + "'classesDirectories' in the autoconfigurationOptimizer extension, or ensure "
+                                + "the project is compiled and contains a class annotated with @SpringBootApplication.");
+            }
         }
 
         return command;
+    }
+
+    private Iterable<File> resolveClassesDirectoriesForScan() {
+        if (!getClassesDirectories().isEmpty()) {
+            return getClassesDirectories().getFiles();
+        }
+        if (getRuntimeClasspath().isPresent() && !getRuntimeClasspath().get().isEmpty()) {
+            return getRuntimeClasspath().get().stream().filter(File::isDirectory).collect(Collectors.toList());
+        }
+        return List.of();
     }
 }
