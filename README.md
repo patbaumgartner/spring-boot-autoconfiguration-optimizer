@@ -38,7 +38,7 @@ optimizer.properties            evaluation for excluded configs
 
 ## 🚀 Benchmark Results
 
-Startup time benchmarks run automatically on every push to `main` against a [PetClinic](integration-tests/petclinic-sample)-like application (Web + JPA + Actuator + Cache + Validation) using Java 21 on GitHub Actions runners.
+Startup time benchmarks run automatically on every push to `main` against a [PetClinic](integration-tests/petclinic-sample)-like application (Web + JPA + Actuator + Cache + Validation) using Java 17, 21, and 25 on GitHub Actions runners.
 
 > **[View the latest benchmark report →](../../actions/workflows/benchmarks.yml)**  
 > Download the `benchmark-report` artifact from the most recent successful run for exact numbers.
@@ -176,9 +176,9 @@ mvn -Pnative native:compile                   # 3. Native compilation
 
 | Spring Boot | Java | Build Tool | Status |
 |---|---|---|---|
-| 4.0.x | 21, 25 | Maven, Gradle 9 | ✅ Default |
+| 4.0.x | 17, 21, 25 | Maven, Gradle 9 | ✅ Default |
 
-> **Spring Boot 4.0** requires **Java 21 minimum** and is the default target for this library.
+> **Spring Boot 4.0** requires **Java 17 minimum** and is the default target for this library.
 
 ## Running Benchmarks Locally
 
