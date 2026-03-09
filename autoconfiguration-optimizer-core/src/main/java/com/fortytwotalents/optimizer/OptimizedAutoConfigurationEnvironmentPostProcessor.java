@@ -3,6 +3,8 @@ package com.fortytwotalents.optimizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.context.annotation.ImportCandidates;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -10,14 +12,8 @@ import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -54,9 +50,8 @@ public class OptimizedAutoConfigurationEnvironmentPostProcessor implements Envir
 	static final String OPTIMIZER_PROPERTIES_FILE = "META-INF/autoconfiguration-optimizer.properties";
 	static final String LOADED_CONFIGURATIONS_KEY = "autoconfiguration.optimizer.loaded-configurations";
 	static final String PROPERTY_SOURCE_NAME = "autoconfigurationOptimizerExclusions";
-	static final String EXCLUDE_PROPERTY = "spring.autoconfigure.exclude";
 
-	static final String AUTO_CONFIGURATION_IMPORTS_LOCATION = "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports";
+	static final String EXCLUDE_PROPERTY = "spring.autoconfigure.exclude";
 
 	@Override
 	public int getOrder() {
@@ -150,25 +145,12 @@ public class OptimizedAutoConfigurationEnvironmentPostProcessor implements Envir
 		return Arrays.stream(value.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toSet());
 	}
 
-	List<String> loadAllAvailableAutoConfigurations() throws IOException {
-		List<String> autoConfigs = new ArrayList<>();
+	List<String> loadAllAvailableAutoConfigurations() {
 		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 		if (classLoader == null) {
 			classLoader = OptimizedAutoConfigurationEnvironmentPostProcessor.class.getClassLoader();
 		}
-		Enumeration<URL> resources = classLoader.getResources(AUTO_CONFIGURATION_IMPORTS_LOCATION);
-
-		while (resources.hasMoreElements()) {
-			URL url = resources.nextElement();
-			try (BufferedReader reader = new BufferedReader(
-					new InputStreamReader(url.openStream(), StandardCharsets.UTF_8))) {
-				reader.lines()
-					.map(String::trim)
-					.filter(line -> !line.isEmpty() && !line.startsWith("#"))
-					.forEach(autoConfigs::add);
-			}
-		}
-		return autoConfigs;
+		return ImportCandidates.load(AutoConfiguration.class, classLoader).getCandidates();
 	}
 
 	void applyExclusions(ConfigurableEnvironment environment, List<String> toExclude) {
