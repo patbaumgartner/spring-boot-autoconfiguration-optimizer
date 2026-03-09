@@ -69,6 +69,10 @@ class OptimizedAutoConfigurationImportFilterTest {
 		OptimizedAutoConfigurationImportFilter filter = Mockito.spy(new OptimizedAutoConfigurationImportFilter());
 		filter.setEnvironment(new MockEnvironment());
 		Mockito.doReturn(Set.of("com.example.FooAutoConfiguration")).when(filter).getAllowedConfigurations();
+		// All three candidates are registered auto-configuration candidates
+		Set<String> allCandidates = Set.of("com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration",
+				"com.example.BazAutoConfiguration");
+		Mockito.doReturn(allCandidates).when(filter).getAllCandidates();
 
 		String[] candidates = { "com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration",
 				"com.example.BazAutoConfiguration" };
@@ -83,10 +87,37 @@ class OptimizedAutoConfigurationImportFilterTest {
 	}
 
 	@Test
+	void match_allowsProgrammaticImportNotInCandidateSet() {
+		OptimizedAutoConfigurationImportFilter filter = Mockito.spy(new OptimizedAutoConfigurationImportFilter());
+		filter.setEnvironment(new MockEnvironment());
+		Mockito.doReturn(Set.of("com.example.FooAutoConfiguration")).when(filter).getAllowedConfigurations();
+		// Only FooAutoConfiguration and BarAutoConfiguration are registered candidates;
+		// ProgrammaticInnerConfig is an @Import-ed inner class, not a registered
+		// candidate
+		Mockito.doReturn(Set.of("com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration"))
+			.when(filter)
+			.getAllCandidates();
+
+		String[] candidates = { "com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration",
+				"com.example.SomeAutoConfiguration$ProgrammaticInnerConfig" };
+
+		boolean[] result = filter.match(candidates, null);
+
+		assertThat(result[0]).isTrue(); // FooAutoConfiguration is in the training set
+		assertThat(result[1]).isFalse(); // BarAutoConfiguration is a registered
+											// candidate but not in the training set
+		assertThat(result[2]).isTrue(); // ProgrammaticInnerConfig is NOT a registered
+										// candidate — must be passed through
+	}
+
+	@Test
 	void match_passesNullCandidatesThroughUnchanged() {
 		OptimizedAutoConfigurationImportFilter filter = Mockito.spy(new OptimizedAutoConfigurationImportFilter());
 		filter.setEnvironment(new MockEnvironment());
 		Mockito.doReturn(Set.of("com.example.FooAutoConfiguration")).when(filter).getAllowedConfigurations();
+		Mockito.doReturn(Set.of("com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration"))
+			.when(filter)
+			.getAllCandidates();
 
 		// null entries represent candidates already removed by an earlier filter
 		String[] candidates = { null, "com.example.BarAutoConfiguration" };
@@ -111,11 +142,24 @@ class OptimizedAutoConfigurationImportFilterTest {
 	}
 
 	@Test
+	void getAllCandidates_loadsOnlyOnce() {
+		OptimizedAutoConfigurationImportFilter filter = new OptimizedAutoConfigurationImportFilter();
+		filter.setEnvironment(new MockEnvironment());
+
+		// Call twice — candidate loading should happen only once (same Set instance)
+		Set<String> first = filter.getAllCandidates();
+		Set<String> second = filter.getAllCandidates();
+
+		assertThat(first).isSameAs(second);
+	}
+
+	@Test
 	void match_allowsAllConfigurationsWhenAllAreInTrainingSet() {
 		OptimizedAutoConfigurationImportFilter filter = Mockito.spy(new OptimizedAutoConfigurationImportFilter());
 		filter.setEnvironment(new MockEnvironment());
 		Set<String> allowed = Set.of("com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration");
 		Mockito.doReturn(allowed).when(filter).getAllowedConfigurations();
+		Mockito.doReturn(allowed).when(filter).getAllCandidates();
 
 		String[] candidates = { "com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration" };
 
