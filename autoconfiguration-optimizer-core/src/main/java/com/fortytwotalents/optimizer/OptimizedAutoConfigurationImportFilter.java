@@ -3,8 +3,10 @@ package com.fortytwotalents.optimizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanClassLoaderAware;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurationImportFilter;
 import org.springframework.boot.autoconfigure.AutoConfigurationMetadata;
+import org.springframework.boot.context.annotation.ImportCandidates;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
@@ -12,6 +14,7 @@ import org.springframework.core.io.Resource;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -42,6 +45,17 @@ import java.util.stream.Collectors;
  * are loaded or their conditions evaluated</li>
  * </ul>
  *
+ * <p>
+ * <strong>Important:</strong> In Spring Boot 4, {@code AutoConfigurationImportFilter} may
+ * be invoked not only for the top-level candidates from {@code AutoConfiguration.imports}
+ * files but also for configurations that are programmatically {@code @Import}ed by other
+ * auto-configurations (for example, {@code DataSourceConfiguration.Hikari} imported by
+ * {@code DataSourceAutoConfiguration.PooledDataSourceConfiguration}). Such programmatic
+ * imports are <em>not</em> registered as auto-configuration candidates and are therefore
+ * not captured during training. This filter only excludes configurations that appear in
+ * the complete set of registered auto-configuration candidates; any configuration that is
+ * not a registered candidate is passed through unconditionally.
+ *
  * @see TrainingRunApplicationListener
  * @see AutoConfigurationOptimizerProperties
  */
@@ -57,6 +71,10 @@ public class OptimizedAutoConfigurationImportFilter
 	private boolean initialized;
 
 	private Set<String> allowedConfigurations;
+
+	private boolean allCandidatesInitialized;
+
+	private Set<String> allCandidates;
 
 	@Override
 	public void setBeanClassLoader(ClassLoader classLoader) {
@@ -84,12 +102,17 @@ public class OptimizedAutoConfigurationImportFilter
 			return result;
 		}
 
+		Set<String> all = getAllCandidates();
 		int filteredCount = 0;
 		for (int i = 0; i < autoConfigurationClasses.length; i++) {
 			String config = autoConfigurationClasses[i];
 			// null means an earlier filter already removed this candidate; pass it
-			// through
-			result[i] = config == null || allowed.contains(config);
+			// through.
+			// Also pass through any configuration that is not a registered
+			// auto-configuration candidate (e.g., programmatically @Import-ed inner
+			// configurations such as DataSourceConfiguration$Hikari). Only exclude
+			// configurations that are registered candidates absent from the training set.
+			result[i] = config == null || allowed.contains(config) || !all.contains(config);
 			if (!result[i]) {
 				filteredCount++;
 			}
@@ -132,6 +155,25 @@ public class OptimizedAutoConfigurationImportFilter
 			initialized = true;
 		}
 		return allowedConfigurations;
+	}
+
+	/**
+	 * Returns the complete set of registered auto-configuration candidate class names
+	 * (from all {@code AutoConfiguration.imports} files on the classpath), loading it
+	 * lazily on first access.
+	 *
+	 * <p>
+	 * This set is used to distinguish registered auto-configurations (which the filter
+	 * should consider for exclusion) from programmatically {@code @Import}ed
+	 * configurations that are not registered candidates (which must always be passed
+	 * through).
+	 */
+	Set<String> getAllCandidates() {
+		if (!allCandidatesInitialized) {
+			allCandidates = loadAllCandidates();
+			allCandidatesInitialized = true;
+		}
+		return allCandidates;
 	}
 
 	private Set<String> loadAllowedConfigurations() {
@@ -178,6 +220,12 @@ public class OptimizedAutoConfigurationImportFilter
 					+ "running with all auto-configurations", e);
 			return null;
 		}
+	}
+
+	private Set<String> loadAllCandidates() {
+		ClassLoader loader = this.classLoader != null ? this.classLoader
+				: Thread.currentThread().getContextClassLoader();
+		return new HashSet<>(ImportCandidates.load(AutoConfiguration.class, loader).getCandidates());
 	}
 
 }
