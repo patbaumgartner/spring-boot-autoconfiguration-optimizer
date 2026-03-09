@@ -12,8 +12,7 @@ import org.springframework.lang.Nullable;
  * Registers hints required for GraalVM native image compilation:
  * <ul>
  * <li>The optimizer properties file as a classpath resource</li>
- * <li>Reflection hints for the
- * {@link OptimizedAutoConfigurationEnvironmentPostProcessor}</li>
+ * <li>Reflection hints for {@link OptimizedAutoConfigurationImportFilter}</li>
  * </ul>
  */
 public class AutoConfigurationOptimizerRuntimeHints implements RuntimeHintsRegistrar {
@@ -21,7 +20,7 @@ public class AutoConfigurationOptimizerRuntimeHints implements RuntimeHintsRegis
 	@Override
 	public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
 		// Register the optimizer properties file so it's included in the native image
-		hints.resources().registerPattern(OptimizedAutoConfigurationEnvironmentPostProcessor.OPTIMIZER_PROPERTIES_FILE);
+		hints.resources().registerPattern(OptimizedAutoConfigurationImportFilter.OPTIMIZER_PROPERTIES_FILE);
 
 		// Register the AutoConfiguration.imports files so they're readable at runtime
 		hints.resources()
