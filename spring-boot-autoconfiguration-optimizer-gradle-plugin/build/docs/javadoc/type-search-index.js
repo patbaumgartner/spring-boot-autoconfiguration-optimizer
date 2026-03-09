@@ -1,0 +1,1 @@
+typeSearchIndex = [{"l":"All Classes and Interfaces","u":"allclasses-index.html"},{"p":"com.fortytwotalents.optimizer.gradle","l":"AutoConfigurationOptimizerExtension"},{"p":"com.fortytwotalents.optimizer.gradle","l":"AutoConfigurationOptimizerPlugin"},{"p":"com.fortytwotalents.optimizer.gradle","l":"TrainTask"}];updateSearchResults();

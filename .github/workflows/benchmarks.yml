@@ -1,0 +1,192 @@
+name: Benchmarks
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: 'Number of benchmark iterations'
+        required: false
+        default: '5'
+
+permissions:
+  contents: write
+
+jobs:
+  benchmark:
+    name: Startup Time Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build project
+        run: mvn --batch-mode --no-transfer-progress package -DskipTests
+
+      - name: Run training run on PetClinic
+        run: |
+          mkdir -p benchmarks/results/training
+          java \
+            -Dautoconfiguration.optimizer.training-run=true \
+            -Dautoconfiguration.optimizer.exit-after-training=true \
+            -Dautoconfiguration.optimizer.output-directory=benchmarks/results/training \
+            -Dautoconfiguration.optimizer.output-file=autoconfiguration-optimizer.properties \
+            -jar integration-tests/petclinic-sample/target/autoconfiguration-optimizer-petclinic-sample-*.jar \
+            --spring.main.banner-mode=off \
+            --server.port=0 \
+            --spring.jpa.show-sql=false &
+
+          # Wait for the training to complete (exit-after-training=true)
+          wait
+
+          echo "Training properties:"
+          cat benchmarks/results/training/autoconfiguration-optimizer.properties
+
+      - name: Run baseline measurements
+        id: baseline
+        run: |
+          TOTAL=0
+          COUNT=0
+          for i in $(seq 1 ${{ github.event.inputs.iterations || '5' }}); do
+            OUTPUT=$(timeout 60 java \
+              -Dautoconfiguration.optimizer.enabled=false \
+              -jar integration-tests/petclinic-sample/target/autoconfiguration-optimizer-petclinic-sample-*.jar \
+              --spring.main.banner-mode=off \
+              --server.port=0 \
+              --spring.jpa.show-sql=false 2>&1 | \
+              grep -m1 "Started .* in" || true)
+
+            SECONDS_VAL=$(echo "${OUTPUT}" | grep -oP 'in \K[\d.]+(?= seconds)' || echo "")
+            if [ -n "${SECONDS_VAL}" ]; then
+              MS=$(printf "%.0f" $(echo "${SECONDS_VAL} * 1000" | bc))
+              TOTAL=$((TOTAL + MS))
+              COUNT=$((COUNT + 1))
+              echo "Baseline run ${i}: ${MS}ms"
+            fi
+          done
+
+          if [ ${COUNT} -gt 0 ]; then
+            AVG=$((TOTAL / COUNT))
+            echo "Baseline average: ${AVG}ms"
+            echo "baseline_avg=${AVG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run optimized measurements
+        id: optimized
+        run: |
+          # Prepare classpath with optimizer properties
+          TEMP_DIR=$(mktemp -d)
+          mkdir -p "${TEMP_DIR}/META-INF"
+          cp benchmarks/results/training/autoconfiguration-optimizer.properties \
+             "${TEMP_DIR}/META-INF/"
+
+          TOTAL=0
+          COUNT=0
+          JAR=$(ls integration-tests/petclinic-sample/target/autoconfiguration-optimizer-petclinic-sample-*.jar | head -1)
+
+          for i in $(seq 1 ${{ github.event.inputs.iterations || '5' }}); do
+            OUTPUT=$(timeout 60 java \
+              -cp "${TEMP_DIR}:${JAR}" \
+              -Dautoconfiguration.optimizer.enabled=true \
+              org.springframework.boot.loader.launch.JarLauncher \
+              --spring.main.banner-mode=off \
+              --server.port=0 \
+              --spring.jpa.show-sql=false 2>&1 | \
+              grep -m1 "Started .* in" || true)
+
+            SECONDS_VAL=$(echo "${OUTPUT}" | grep -oP 'in \K[\d.]+(?= seconds)' || echo "")
+            if [ -n "${SECONDS_VAL}" ]; then
+              MS=$(printf "%.0f" $(echo "${SECONDS_VAL} * 1000" | bc))
+              TOTAL=$((TOTAL + MS))
+              COUNT=$((COUNT + 1))
+              echo "Optimized run ${i}: ${MS}ms"
+            fi
+          done
+
+          rm -rf "${TEMP_DIR}"
+
+          if [ ${COUNT} -gt 0 ]; then
+            AVG=$((TOTAL / COUNT))
+            echo "Optimized average: ${AVG}ms"
+            echo "optimized_avg=${AVG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate benchmark report
+        run: |
+          mkdir -p benchmarks/results
+          BASELINE_AVG="${{ steps.baseline.outputs.baseline_avg }}"
+          OPTIMIZED_AVG="${{ steps.optimized.outputs.optimized_avg }}"
+          JAVA_VERSION=$(java -version 2>&1 | grep -oP '(?<=version ")[^"]+')
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          if [ -n "${BASELINE_AVG}" ] && [ -n "${OPTIMIZED_AVG}" ] && \
+             [ "${BASELINE_AVG}" -gt 0 ] && [ "${OPTIMIZED_AVG}" -gt 0 ]; then
+            IMPROVEMENT=$((BASELINE_AVG - OPTIMIZED_AVG))
+            IMPROVEMENT_PCT=$(echo "scale=1; ${IMPROVEMENT} * 100 / ${BASELINE_AVG}" | bc)
+          else
+            IMPROVEMENT=0
+            IMPROVEMENT_PCT="N/A"
+            BASELINE_AVG="${BASELINE_AVG:-N/A}"
+            OPTIMIZED_AVG="${OPTIMIZED_AVG:-N/A}"
+          fi
+
+          cat > benchmarks/results/benchmark-report.md << EOF
+          # Spring Boot Autoconfiguration Optimizer - Benchmark Results
+
+          **Generated:** ${TIMESTAMP}
+          **Java Version:** ${JAVA_VERSION}
+          **Iterations:** ${{ github.event.inputs.iterations || '5' }}
+          **Target Application:** Spring PetClinic Sample (Web + JPA + Actuator + Cache + Validation)
+          **CI Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          ## Startup Time Results
+
+          | Configuration | Average Startup Time |
+          |---|---|
+          | ⚪ Baseline (no optimizer) | ${BASELINE_AVG}ms |
+          | 🟢 Optimized (with optimizer) | ${OPTIMIZED_AVG}ms |
+          | **Improvement** | **${IMPROVEMENT}ms (${IMPROVEMENT_PCT}% faster)** |
+          EOF
+
+      - name: Upload benchmark report
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-report
+          path: benchmarks/results/
+          retention-days: 90
+
+      - name: Post benchmark summary
+        run: |
+          BASELINE="${{ steps.baseline.outputs.baseline_avg }}"
+          OPTIMIZED="${{ steps.optimized.outputs.optimized_avg }}"
+
+          if [ -n "${BASELINE}" ] && [ -n "${OPTIMIZED}" ] && \
+             [ "${BASELINE}" -gt 0 ] && [ "${OPTIMIZED}" -gt 0 ]; then
+            IMPROVEMENT=$((BASELINE - OPTIMIZED))
+            PCT=$(echo "scale=1; ${IMPROVEMENT} * 100 / ${BASELINE}" | bc)
+          else
+            IMPROVEMENT="N/A"
+            PCT="N/A"
+          fi
+
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## 🚀 Benchmark Results: Spring Boot Autoconfiguration Optimizer
+
+          | Metric | Value |
+          |--------|-------|
+          | ⚪ Baseline startup time | ${BASELINE:-N/A}ms |
+          | 🟢 Optimized startup time | ${OPTIMIZED:-N/A}ms |
+          | 📈 Improvement | ${IMPROVEMENT}ms |
+          | 📊 Speed improvement | ${PCT}% faster |
+
+          *Target application: PetClinic Sample (Web + JPA + Actuator + Cache + Validation)*
+          EOF
