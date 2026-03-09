@@ -1,0 +1,7 @@
+target/
+build/
+.gradle/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+autoconfiguration-optimizer-core/autoconfiguration-optimizer.properties
