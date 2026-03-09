@@ -50,12 +50,12 @@
     </modules>
 
     <properties>
-        <java.version>17</java.version>
-        <maven.compiler.release>17</maven.compiler.release>
+        <java.version>21</java.version>
+        <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <spring-boot.version>3.5.11</spring-boot.version>
+        <spring-boot.version>4.0.0-RC2</spring-boot.version>
         <!-- Pin assertj to the patched version (CVE: XXE in isXmlEqualTo, fixed in 3.27.7) -->
         <assertj.version>3.27.7</assertj.version>
         <maven-plugin-api.version>3.9.9</maven-plugin-api.version>
@@ -161,35 +161,25 @@
         </plugins>
     </build>
 
-    <profiles>
-        <!-- ===== Spring Boot 4 compatibility profile =====
-             Tests against the latest Spring Boot 4.0 milestone.
-             Requires Java 21+. Spring Boot 4 milestone repo is added automatically.
-             Usage: mvn verify -Pspring-boot-4
-        -->
-        <profile>
-            <id>spring-boot-4</id>
-            <properties>
-                <spring-boot.version>4.0.0-RC2</spring-boot.version>
-            </properties>
-            <repositories>
-                <repository>
-                    <id>spring-milestones</id>
-                    <name>Spring Milestones</name>
-                    <url>https://repo.spring.io/milestone</url>
-                    <snapshots><enabled>false</enabled></snapshots>
-                </repository>
-            </repositories>
-            <pluginRepositories>
-                <pluginRepository>
-                    <id>spring-milestones</id>
-                    <name>Spring Milestones</name>
-                    <url>https://repo.spring.io/milestone</url>
-                    <snapshots><enabled>false</enabled></snapshots>
-                </pluginRepository>
-            </pluginRepositories>
-        </profile>
+    <repositories>
+        <repository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+    </repositories>
 
+    <pluginRepositories>
+        <pluginRepository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots><enabled>false</enabled></snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <profiles>
         <profile>
             <id>release</id>
             <build>
