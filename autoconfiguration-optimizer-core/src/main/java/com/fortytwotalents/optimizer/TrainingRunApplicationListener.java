@@ -26,137 +26,143 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Application listener that records which auto-configurations were loaded during a training run.
+ * Application listener that records which auto-configurations were loaded during a
+ * training run.
  *
- * <p>This listener is activated when {@code autoconfiguration.optimizer.training-run=true} is set.
- * It uses Spring Boot's {@link ConditionEvaluationReport} to determine which auto-configurations
- * were active and writes them to a properties file.
+ * <p>
+ * This listener is activated when {@code autoconfiguration.optimizer.training-run=true}
+ * is set. It uses Spring Boot's {@link ConditionEvaluationReport} to determine which
+ * auto-configurations were active and writes them to a properties file.
  *
- * <p>The generated file should be placed in {@code src/main/resources/META-INF/} to be picked up
- * by subsequent builds and used by the {@link OptimizedAutoConfigurationEnvironmentPostProcessor}.
+ * <p>
+ * The generated file should be placed in {@code src/main/resources/META-INF/} to be
+ * picked up by subsequent builds and used by the
+ * {@link OptimizedAutoConfigurationEnvironmentPostProcessor}.
  *
  * @see OptimizedAutoConfigurationEnvironmentPostProcessor
  * @see AutoConfigurationOptimizerProperties
  */
 public class TrainingRunApplicationListener implements ApplicationListener<ApplicationReadyEvent> {
 
-    private static final Logger log = LoggerFactory.getLogger(TrainingRunApplicationListener.class);
+	private static final Logger log = LoggerFactory.getLogger(TrainingRunApplicationListener.class);
 
-    static final String AUTO_CONFIGURATION_IMPORTS_LOCATION =
-            "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports";
-    static final String LOADED_CONFIGURATIONS_KEY = "autoconfiguration.optimizer.loaded-configurations";
-    static final String TRAINING_TIMESTAMP_KEY = "autoconfiguration.optimizer.training-timestamp";
+	static final String TRAINING_TIMESTAMP_KEY = "autoconfiguration.optimizer.training-timestamp";
 
-    private final AutoConfigurationOptimizerProperties properties;
-    private final ConditionEvaluationReport conditionEvaluationReport;
+	private final AutoConfigurationOptimizerProperties properties;
 
-    public TrainingRunApplicationListener(
-            AutoConfigurationOptimizerProperties properties,
-            ConditionEvaluationReport conditionEvaluationReport) {
-        this.properties = properties;
-        this.conditionEvaluationReport = conditionEvaluationReport;
-    }
+	private final ConditionEvaluationReport conditionEvaluationReport;
 
-    @Override
-    public void onApplicationEvent(ApplicationReadyEvent event) {
-        log.info("Spring Boot Autoconfiguration Optimizer: Training run started");
+	public TrainingRunApplicationListener(AutoConfigurationOptimizerProperties properties,
+			ConditionEvaluationReport conditionEvaluationReport) {
+		this.properties = properties;
+		this.conditionEvaluationReport = conditionEvaluationReport;
+	}
 
-        try {
-            List<String> loadedAutoConfigs = detectLoadedAutoConfigurations();
-            writeTrainingFile(loadedAutoConfigs);
+	@Override
+	public void onApplicationEvent(ApplicationReadyEvent event) {
+		log.info("Spring Boot Autoconfiguration Optimizer: Training run started");
 
-            log.info("Spring Boot Autoconfiguration Optimizer: Training run complete. "
-                    + "Detected {} loaded auto-configurations.", loadedAutoConfigs.size());
+		try {
+			List<String> loadedAutoConfigs = detectLoadedAutoConfigurations();
+			writeTrainingFile(loadedAutoConfigs);
 
-            if (properties.isExitAfterTraining()) {
-                log.info("Spring Boot Autoconfiguration Optimizer: Exiting after training run.");
-                int exitCode = SpringApplication.exit(event.getApplicationContext(), () -> 0);
-                System.exit(exitCode);
-            }
-        } catch (IOException e) {
-            log.error("Spring Boot Autoconfiguration Optimizer: Failed to write training file", e);
-        }
-    }
+			log.info("Spring Boot Autoconfiguration Optimizer: Training run complete. "
+					+ "Detected {} loaded auto-configurations.", loadedAutoConfigs.size());
 
-    /**
-     * Detects which auto-configurations were loaded by cross-referencing the
-     * {@link ConditionEvaluationReport} with all available auto-configurations on the classpath.
-     */
-    List<String> detectLoadedAutoConfigurations() throws IOException {
-        Set<String> availableAutoConfigs = loadAvailableAutoConfigurations();
+			if (properties.isExitAfterTraining()) {
+				log.info("Spring Boot Autoconfiguration Optimizer: Exiting after training run.");
+				int exitCode = SpringApplication.exit(event.getApplicationContext(), () -> 0);
+				System.exit(exitCode);
+			}
+		}
+		catch (IOException e) {
+			log.error("Spring Boot Autoconfiguration Optimizer: Failed to write training file", e);
+		}
+	}
 
-        Map<String, ConditionEvaluationReport.ConditionAndOutcomes> conditionOutcomes =
-                conditionEvaluationReport.getConditionAndOutcomesBySource();
+	/**
+	 * Detects which auto-configurations were loaded by cross-referencing the
+	 * {@link ConditionEvaluationReport} with all available auto-configurations on the
+	 * classpath.
+	 */
+	List<String> detectLoadedAutoConfigurations() throws IOException {
+		Set<String> availableAutoConfigs = loadAvailableAutoConfigurations();
 
-        return conditionOutcomes.entrySet().stream()
-                .filter(entry -> availableAutoConfigs.contains(entry.getKey()))
-                .filter(entry -> entry.getValue().isFullMatch())
-                .map(Map.Entry::getKey)
-                .sorted()
-                .collect(Collectors.toList());
-    }
+		Map<String, ConditionEvaluationReport.ConditionAndOutcomes> conditionOutcomes = conditionEvaluationReport
+			.getConditionAndOutcomesBySource();
 
-    /**
-     * Loads all available auto-configuration class names from
-     * {@code META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports}
-     * files on the classpath.
-     */
-    Set<String> loadAvailableAutoConfigurations() throws IOException {
-        Set<String> autoConfigs = new HashSet<>();
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        Enumeration<URL> resources = classLoader.getResources(AUTO_CONFIGURATION_IMPORTS_LOCATION);
+		return conditionOutcomes.entrySet()
+			.stream()
+			.filter(entry -> availableAutoConfigs.contains(entry.getKey()))
+			.filter(entry -> entry.getValue().isFullMatch())
+			.map(Map.Entry::getKey)
+			.sorted()
+			.collect(Collectors.toList());
+	}
 
-        while (resources.hasMoreElements()) {
-            URL url = resources.nextElement();
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(url.openStream(), StandardCharsets.UTF_8))) {
-                reader.lines()
-                        .map(String::trim)
-                        .filter(line -> !line.isEmpty() && !line.startsWith("#"))
-                        .forEach(autoConfigs::add);
-            }
-        }
+	/**
+	 * Loads all available auto-configuration class names from
+	 * {@code META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports}
+	 * files on the classpath.
+	 */
+	Set<String> loadAvailableAutoConfigurations() throws IOException {
+		Set<String> autoConfigs = new HashSet<>();
+		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+		Enumeration<URL> resources = classLoader
+			.getResources(OptimizedAutoConfigurationEnvironmentPostProcessor.AUTO_CONFIGURATION_IMPORTS_LOCATION);
 
-        log.debug("Spring Boot Autoconfiguration Optimizer: Found {} available auto-configurations",
-                autoConfigs.size());
-        return autoConfigs;
-    }
+		while (resources.hasMoreElements()) {
+			URL url = resources.nextElement();
+			try (BufferedReader reader = new BufferedReader(
+					new InputStreamReader(url.openStream(), StandardCharsets.UTF_8))) {
+				reader.lines()
+					.map(String::trim)
+					.filter(line -> !line.isEmpty() && !line.startsWith("#"))
+					.forEach(autoConfigs::add);
+			}
+		}
 
-    /**
-     * Writes the list of loaded auto-configurations to the output file.
-     */
-    void writeTrainingFile(List<String> loadedAutoConfigs) throws IOException {
-        Path outputDir = Paths.get(properties.getOutputDirectory());
-        Files.createDirectories(outputDir);
+		log.debug("Spring Boot Autoconfiguration Optimizer: Found {} available auto-configurations",
+				autoConfigs.size());
+		return autoConfigs;
+	}
 
-        Path outputFile = outputDir.resolve(properties.getOutputFile());
+	/**
+	 * Writes the list of loaded auto-configurations to the output file.
+	 */
+	void writeTrainingFile(List<String> loadedAutoConfigs) throws IOException {
+		Path outputDir = Paths.get(properties.getOutputDirectory());
+		Files.createDirectories(outputDir);
 
-        List<String> lines = new ArrayList<>();
-        lines.add("# Generated by Spring Boot Autoconfiguration Optimizer");
-        lines.add("# Training run completed on: "
-                + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-        lines.add("# Copy this file to src/main/resources/META-INF/ to enable optimization");
-        lines.add("#");
-        lines.add("# Total auto-configurations loaded: " + loadedAutoConfigs.size());
-        lines.add("");
-        lines.add(TRAINING_TIMESTAMP_KEY + "="
-                + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-        lines.add("");
+		Path outputFile = outputDir.resolve(properties.getOutputFile());
 
-        if (loadedAutoConfigs.isEmpty()) {
-            lines.add(LOADED_CONFIGURATIONS_KEY + "=");
-        } else {
-            StringBuilder sb = new StringBuilder(LOADED_CONFIGURATIONS_KEY + "=\\\n");
-            for (int i = 0; i < loadedAutoConfigs.size(); i++) {
-                sb.append("  ").append(loadedAutoConfigs.get(i));
-                if (i < loadedAutoConfigs.size() - 1) {
-                    sb.append(",\\\n");
-                }
-            }
-            lines.add(sb.toString());
-        }
+		List<String> lines = new ArrayList<>();
+		lines.add("# Generated by Spring Boot Autoconfiguration Optimizer");
+		lines.add("# Training run completed on: " + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+		lines.add("# Copy this file to src/main/resources/META-INF/ to enable optimization");
+		lines.add("#");
+		lines.add("# Total auto-configurations loaded: " + loadedAutoConfigs.size());
+		lines.add("");
+		lines.add(TRAINING_TIMESTAMP_KEY + "=" + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+		lines.add("");
 
-        Files.write(outputFile, lines, StandardCharsets.UTF_8);
-        log.info("Spring Boot Autoconfiguration Optimizer: Training file written to: {}", outputFile.toAbsolutePath());
-    }
+		if (loadedAutoConfigs.isEmpty()) {
+			lines.add(OptimizedAutoConfigurationEnvironmentPostProcessor.LOADED_CONFIGURATIONS_KEY + "=");
+		}
+		else {
+			StringBuilder sb = new StringBuilder(
+					OptimizedAutoConfigurationEnvironmentPostProcessor.LOADED_CONFIGURATIONS_KEY + "=\\\n");
+			for (int i = 0; i < loadedAutoConfigs.size(); i++) {
+				sb.append("  ").append(loadedAutoConfigs.get(i));
+				if (i < loadedAutoConfigs.size() - 1) {
+					sb.append(",\\\n");
+				}
+			}
+			lines.add(sb.toString());
+		}
+
+		Files.write(outputFile, lines, StandardCharsets.UTF_8);
+		log.info("Spring Boot Autoconfiguration Optimizer: Training file written to: {}", outputFile.toAbsolutePath());
+	}
+
 }

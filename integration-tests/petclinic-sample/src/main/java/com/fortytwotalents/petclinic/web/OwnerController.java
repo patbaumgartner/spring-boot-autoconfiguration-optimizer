@@ -21,44 +21,46 @@ import java.util.List;
 @RequestMapping("/owners")
 public class OwnerController {
 
-    private final OwnerRepository ownerRepository;
+	private final OwnerRepository ownerRepository;
 
-    public OwnerController(OwnerRepository ownerRepository) {
-        this.ownerRepository = ownerRepository;
-    }
+	public OwnerController(OwnerRepository ownerRepository) {
+		this.ownerRepository = ownerRepository;
+	}
 
-    @GetMapping
-    public String listOwners(@RequestParam(required = false, defaultValue = "") String lastName, Model model) {
-        List<Owner> owners;
-        if (lastName.isBlank()) {
-            owners = (List<Owner>) ownerRepository.findAll();
-        } else {
-            owners = ownerRepository.findByLastName(lastName);
-        }
-        model.addAttribute("owners", owners);
-        return "owners/list";
-    }
+	@GetMapping
+	public String listOwners(@RequestParam(required = false, defaultValue = "") String lastName, Model model) {
+		List<Owner> owners;
+		if (lastName.isBlank()) {
+			owners = (List<Owner>) ownerRepository.findAll();
+		}
+		else {
+			owners = ownerRepository.findByLastName(lastName);
+		}
+		model.addAttribute("owners", owners);
+		return "owners/list";
+	}
 
-    @GetMapping("/{ownerId}")
-    public String showOwner(@PathVariable Integer ownerId, Model model) {
-        Owner owner = ownerRepository.findById(ownerId)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid owner id: " + ownerId));
-        model.addAttribute("owner", owner);
-        return "owners/details";
-    }
+	@GetMapping("/{ownerId}")
+	public String showOwner(@PathVariable Integer ownerId, Model model) {
+		Owner owner = ownerRepository.findById(ownerId)
+			.orElseThrow(() -> new IllegalArgumentException("Invalid owner id: " + ownerId));
+		model.addAttribute("owner", owner);
+		return "owners/details";
+	}
 
-    @GetMapping("/new")
-    public String initCreationForm(Model model) {
-        model.addAttribute("owner", new Owner());
-        return "owners/create-or-update";
-    }
+	@GetMapping("/new")
+	public String initCreationForm(Model model) {
+		model.addAttribute("owner", new Owner());
+		return "owners/create-or-update";
+	}
 
-    @PostMapping("/new")
-    public String processCreationForm(@Valid Owner owner, BindingResult result) {
-        if (result.hasErrors()) {
-            return "owners/create-or-update";
-        }
-        ownerRepository.save(owner);
-        return "redirect:/owners/" + owner.getId();
-    }
+	@PostMapping("/new")
+	public String processCreationForm(@Valid Owner owner, BindingResult result) {
+		if (result.hasErrors()) {
+			return "owners/create-or-update";
+		}
+		ownerRepository.save(owner);
+		return "redirect:/owners/" + owner.getId();
+	}
+
 }

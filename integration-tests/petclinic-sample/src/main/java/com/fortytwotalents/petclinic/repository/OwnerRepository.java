@@ -11,6 +11,7 @@ import java.util.List;
  */
 public interface OwnerRepository extends CrudRepository<Owner, Integer> {
 
-    @Cacheable("owners")
-    List<Owner> findByLastName(String lastName);
+	@Cacheable("owners")
+	List<Owner> findByLastName(String lastName);
+
 }

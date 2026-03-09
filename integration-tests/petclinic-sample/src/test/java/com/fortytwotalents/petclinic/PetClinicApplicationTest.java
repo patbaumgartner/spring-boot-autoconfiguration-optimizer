@@ -9,8 +9,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 class PetClinicApplicationTest {
 
-    @Test
-    void contextLoads() {
-        // Application starts without errors
-    }
+	@Test
+	void contextLoads() {
+		// Application starts without errors
+	}
+
 }

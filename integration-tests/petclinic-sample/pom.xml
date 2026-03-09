@@ -1,95 +1,91 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>com.fortytwotalents</groupId>
-        <artifactId>spring-boot-autoconfiguration-optimizer-integration-tests</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
-        <relativePath>../pom.xml</relativePath>
-    </parent>
+  <parent>
+    <groupId>com.fortytwotalents</groupId>
+    <artifactId>spring-boot-autoconfiguration-optimizer-integration-tests</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
 
-    <artifactId>autoconfiguration-optimizer-petclinic-sample</artifactId>
-    <name>Spring Boot Autoconfiguration Optimizer - PetClinic Sample</name>
-    <description>
-        A PetClinic-like sample application demonstrating the autoconfiguration optimizer.
-        This serves as the integration test and benchmark target for the project.
-    </description>
+  <artifactId>autoconfiguration-optimizer-petclinic-sample</artifactId>
+  <name>Spring Boot Autoconfiguration Optimizer - PetClinic Sample</name>
+  <description>A PetClinic-like sample application demonstrating the autoconfiguration optimizer.
+        This serves as the integration test and benchmark target for the project.</description>
 
-    <properties>
-        <start-class>com.fortytwotalents.petclinic.PetClinicApplication</start-class>
-    </properties>
+  <properties>
+    <start-class>com.fortytwotalents.petclinic.PetClinicApplication</start-class>
+  </properties>
 
-    <dependencies>
-        <!-- Optimizer Core -->
-        <dependency>
-            <groupId>com.fortytwotalents</groupId>
-            <artifactId>autoconfiguration-optimizer-core</artifactId>
-        </dependency>
+  <dependencies>
+    <!-- Optimizer Core -->
+    <dependency>
+      <groupId>com.fortytwotalents</groupId>
+      <artifactId>autoconfiguration-optimizer-core</artifactId>
+    </dependency>
 
-        <!-- Spring Boot Web + Thymeleaf (as in PetClinic) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-thymeleaf</artifactId>
-        </dependency>
+    <!-- Spring Boot Web + Thymeleaf (as in PetClinic) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-thymeleaf</artifactId>
+    </dependency>
 
-        <!-- Spring Data JPA + H2 (as in PetClinic) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
-        </dependency>
+    <!-- Spring Data JPA + H2 (as in PetClinic) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>runtime</scope>
+    </dependency>
 
-        <!-- Spring Boot Actuator (as in PetClinic) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
+    <!-- Spring Boot Actuator (as in PetClinic) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
 
-        <!-- Spring Cache (as in PetClinic) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-cache</artifactId>
-        </dependency>
+    <!-- Spring Cache (as in PetClinic) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-cache</artifactId>
+    </dependency>
 
-        <!-- Bean Validation (as in PetClinic) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
+    <!-- Bean Validation (as in PetClinic) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
 
-        <!-- Test -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+    <!-- Test -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>${spring-boot.version}</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <version>${spring-boot.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>repackage</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>

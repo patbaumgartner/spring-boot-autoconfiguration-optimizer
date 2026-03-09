@@ -7,4 +7,5 @@ import org.springframework.data.repository.CrudRepository;
  * Repository for {@link Pet} entities.
  */
 public interface PetRepository extends CrudRepository<Pet, Integer> {
+
 }
