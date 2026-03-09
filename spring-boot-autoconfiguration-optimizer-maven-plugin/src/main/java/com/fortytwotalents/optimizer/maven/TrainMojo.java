@@ -19,7 +19,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * Runs a Spring Boot application training run to detect which auto-configurations are loaded.
@@ -233,7 +232,7 @@ public class TrainMojo extends AbstractMojo {
             }
         }
 
-        return classpathEntries.stream().collect(Collectors.joining(File.pathSeparator));
+        return String.join(File.pathSeparator, classpathEntries);
     }
 
     private String resolveMainClass() throws MojoExecutionException {
