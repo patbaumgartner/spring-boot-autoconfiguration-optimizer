@@ -118,13 +118,12 @@ class MainClassFinderTest {
 	 * {@code metaAnnotationDescriptor} is included so that the meta-annotation byte scan
 	 * finds it.
 	 */
-	private void createAnnotationClassFileInDir(Path classDir, String relativePath,
-			String metaAnnotationDescriptor) throws IOException {
+	private void createAnnotationClassFileInDir(Path classDir, String relativePath, String metaAnnotationDescriptor)
+			throws IOException {
 		Path classFile = classDir.resolve(relativePath);
 		Files.createDirectories(classFile.getParent());
 
-		String internalName = relativePath.replace('\\', '/')
-				.substring(0, relativePath.length() - ".class".length());
+		String internalName = relativePath.replace('\\', '/').substring(0, relativePath.length() - ".class".length());
 		byte[] internalNameBytes = internalName.getBytes(StandardCharsets.UTF_8);
 		byte[] objectBytes = "java/lang/Object".getBytes(StandardCharsets.UTF_8);
 		byte[] annotationInterfaceBytes = "java/lang/annotation/Annotation".getBytes(StandardCharsets.UTF_8);
@@ -188,7 +187,8 @@ class MainClassFinderTest {
 
 		// RuntimeVisibleAnnotations attribute
 		dos.writeShort(8); // attribute_name_index -> #8
-		dos.writeInt(6); // attribute_length: num_annotations(2) + type_index(2) + pairs(2)
+		dos.writeInt(6); // attribute_length: num_annotations(2) + type_index(2) +
+							// pairs(2)
 		dos.writeShort(1); // num_annotations
 		dos.writeShort(7); // annotation.type_index -> #7 (metaAnnotationDescriptor)
 		dos.writeShort(0); // annotation.num_element_value_pairs

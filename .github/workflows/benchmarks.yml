@@ -29,8 +29,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Install Maven plugin to local repository
+        run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl spring-boot-autoconfiguration-optimizer-maven-plugin -am
+
       - name: Build project
-        run: mvn --batch-mode --no-transfer-progress package -DskipTests
+        run: mvn --batch-mode --no-transfer-progress package -DskipTests -f integration-tests/petclinic-sample/pom.xml
 
       - name: Run training run on PetClinic
         id: training
@@ -70,7 +73,7 @@ jobs:
 
           # Rebuild only the petclinic module to produce the optimized fat JAR
           mvn --batch-mode --no-transfer-progress package -DskipTests \
-            -pl integration-tests/petclinic-sample -am
+            -f integration-tests/petclinic-sample/pom.xml
 
       - name: Run baseline measurements
         id: baseline

@@ -19,12 +19,6 @@
   </properties>
 
   <dependencies>
-    <!-- Optimizer Core -->
-    <dependency>
-      <groupId>com.fortytwotalents</groupId>
-      <artifactId>autoconfiguration-optimizer-core</artifactId>
-    </dependency>
-
     <!-- Spring Boot Web + Thymeleaf (as in PetClinic) -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -70,6 +64,13 @@
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- Optimizer core is provided by the plugin at runtime; use test scope here
+         so that training-run integration tests can reference its classes directly -->
+    <dependency>
+      <groupId>com.fortytwotalents</groupId>
+      <artifactId>autoconfiguration-optimizer-core</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -82,6 +83,18 @@
           <execution>
             <goals>
               <goal>repackage</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.fortytwotalents</groupId>
+        <artifactId>spring-boot-autoconfiguration-optimizer-maven-plugin</artifactId>
+        <version>${project.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>inject</goal>
             </goals>
           </execution>
         </executions>

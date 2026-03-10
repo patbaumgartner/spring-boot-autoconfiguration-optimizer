@@ -68,6 +68,9 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Install Maven modules to local repository
+        run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -N && mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl autoconfiguration-optimizer-core
+
       - name: Build with Gradle
         working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin
         run: ./gradlew --no-daemon build
@@ -107,8 +110,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Install Maven plugin to local repository
+        run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl spring-boot-autoconfiguration-optimizer-maven-plugin -am
+
       - name: Run Maven Integration Tests
-        run: mvn --batch-mode --no-transfer-progress verify -pl integration-tests/petclinic-sample -am
+        run: mvn --batch-mode --no-transfer-progress verify -f integration-tests/petclinic-sample/pom.xml
 
       - name: Upload Maven integration test results
         if: always()
