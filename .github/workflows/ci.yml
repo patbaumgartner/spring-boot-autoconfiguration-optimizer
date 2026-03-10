@@ -31,9 +31,6 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Install Maven plugin to local repository
-        run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl spring-boot-autoconfiguration-optimizer-maven-plugin -am
-
       - name: Build with Maven
         run: mvn --batch-mode --no-transfer-progress verify
 
@@ -117,7 +114,7 @@ jobs:
         run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl spring-boot-autoconfiguration-optimizer-maven-plugin -am
 
       - name: Run Maven Integration Tests
-        run: mvn --batch-mode --no-transfer-progress verify -pl integration-tests/petclinic-sample -am
+        run: mvn --batch-mode --no-transfer-progress verify -f integration-tests/petclinic-sample/pom.xml
 
       - name: Upload Maven integration test results
         if: always()
