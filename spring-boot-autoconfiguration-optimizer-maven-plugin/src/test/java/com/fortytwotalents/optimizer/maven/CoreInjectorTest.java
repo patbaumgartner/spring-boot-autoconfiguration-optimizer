@@ -143,4 +143,27 @@ class CoreInjectorTest {
 		assertThat(count).isEqualTo(1);
 	}
 
+	@Test
+	void injectCoreJarContentsRejectsTraversalEntries() throws IOException {
+		// Build a minimal JAR containing a Zip Slip entry (../../evil.txt)
+		Path maliciousJar = tempDir.resolve("malicious.jar");
+		try (var jos = new java.util.jar.JarOutputStream(Files.newOutputStream(maliciousJar))) {
+			java.util.jar.JarEntry entry = new java.util.jar.JarEntry("../../evil.txt");
+			jos.putNextEntry(entry);
+			jos.write("pwned".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+			jos.closeEntry();
+		}
+
+		Path outputDir = tempDir.resolve("classes-slip");
+		Files.createDirectories(outputDir);
+
+		org.assertj.core.api.Assertions
+			.assertThatThrownBy(() -> CoreInjector.injectCoreJarContents(maliciousJar, outputDir))
+			.isInstanceOf(IOException.class)
+			.hasMessageContaining("Zip Slip");
+
+		// Confirm no file was written outside the output directory
+		assertThat(tempDir.resolve("evil.txt")).doesNotExist();
+	}
+
 }

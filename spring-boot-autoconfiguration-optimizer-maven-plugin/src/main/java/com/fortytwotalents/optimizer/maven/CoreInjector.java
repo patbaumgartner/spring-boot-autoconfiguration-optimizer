@@ -72,6 +72,7 @@ final class CoreInjector {
 	 */
 	static void injectCoreJarContents(Path coreJar, Path outputDir) throws IOException {
 		Files.createDirectories(outputDir);
+		Path canonicalOutputDir = outputDir.toRealPath();
 		try (JarFile jarFile = new JarFile(coreJar.toFile())) {
 			Enumeration<JarEntry> entries = jarFile.entries();
 			while (entries.hasMoreElements()) {
@@ -82,7 +83,14 @@ final class CoreInjector {
 					continue;
 				}
 
-				Path targetPath = outputDir.resolve(name);
+				// Guard against Zip Slip: reject any entry whose resolved path escapes
+				// the target output directory.
+				Path targetPath = outputDir.resolve(name).normalize();
+				if (!targetPath.startsWith(canonicalOutputDir)) {
+					throw new IOException(
+							"Zip Slip: JAR entry '" + name + "' would be extracted outside the target directory '"
+									+ canonicalOutputDir + "'. Aborting injection.");
+				}
 
 				if (name.equals(SPRING_FACTORIES)) {
 					try (InputStream is = jarFile.getInputStream(entry)) {
