@@ -142,4 +142,24 @@ class TrainingRunApplicationListenerTest {
 		assertThat(detected).doesNotContain(notMatchedConfig);
 	}
 
+	@Test
+	void detectLoadedAutoConfigurations_excludesOptimizerOwnAutoConfiguration() {
+		AutoConfigurationOptimizerProperties properties = new AutoConfigurationOptimizerProperties();
+		ConditionEvaluationReport report = mock(ConditionEvaluationReport.class);
+
+		// Even if the optimizer's own auto-configuration is present in the report as
+		// fully matched, it must never be recorded in the training file — it should not
+		// be loaded during the production (optimized) run.
+		String optimizerConfig = AutoConfigurationOptimizerAutoConfiguration.class.getName();
+		ConditionEvaluationReport.ConditionAndOutcomes outcomes = mock(
+				ConditionEvaluationReport.ConditionAndOutcomes.class);
+		when(outcomes.isFullMatch()).thenReturn(true);
+		when(report.getConditionAndOutcomesBySource()).thenReturn(Map.of(optimizerConfig, outcomes));
+
+		TrainingRunApplicationListener listener = new TrainingRunApplicationListener(properties, report);
+		List<String> detected = listener.detectLoadedAutoConfigurations();
+
+		assertThat(detected).doesNotContain(optimizerConfig);
+	}
+
 }

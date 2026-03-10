@@ -186,10 +186,8 @@ public class OptimizedAutoConfigurationImportFilter
 		Resource resource = new ClassPathResource(OPTIMIZER_PROPERTIES_FILE, loader);
 
 		if (!resource.exists()) {
-			log.debug(
-					"Spring Boot Autoconfiguration Optimizer: No training file found at classpath:{}. "
-							+ "Running with all auto-configurations.",
-					OPTIMIZER_PROPERTIES_FILE);
+			log.debug("Spring Boot Autoconfiguration Optimizer: No training file found at classpath:{}. "
+					+ "Running with all auto-configurations.", OPTIMIZER_PROPERTIES_FILE);
 			return null;
 		}
 
@@ -211,6 +209,9 @@ public class OptimizedAutoConfigurationImportFilter
 			Set<String> allowed = Arrays.stream(loadedConfigsValue.split(","))
 				.map(String::trim)
 				.filter(s -> !s.isEmpty())
+				// The optimizer's own auto-configuration is never needed in production;
+				// exclude it even if an older training file recorded it.
+				.filter(s -> !s.equals(AutoConfigurationOptimizerAutoConfiguration.class.getName()))
 				.collect(Collectors.toSet());
 
 			log.debug("Spring Boot Autoconfiguration Optimizer: Loaded {} allowed configurations from training file.",
