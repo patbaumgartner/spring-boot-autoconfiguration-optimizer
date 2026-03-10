@@ -117,7 +117,15 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 			.map(key -> key.substring(0, key.indexOf('#')))
 			.collect(Collectors.toSet());
 
+		String optimizerAutoConfigClassName = AutoConfigurationOptimizerAutoConfiguration.class.getName();
+
 		return availableAutoConfigs.stream().filter(config -> {
+			// Always exclude the optimizer's own auto-configuration: it is only useful
+			// during a training run and must not be recorded so that it is also excluded
+			// on subsequent production runs.
+			if (optimizerAutoConfigClassName.equals(config)) {
+				return false;
+			}
 			ConditionEvaluationReport.ConditionAndOutcomes outcomes = conditionOutcomes.get(config);
 			if (outcomes != null) {
 				// Class-level conditions exist: include only when all conditions passed
