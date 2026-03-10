@@ -31,6 +31,14 @@ import java.util.concurrent.TimeUnit;
  * copies the generated properties file to the target resources directory.
  *
  * <p>
+ * The {@code autoconfiguration-optimizer-core} JAR is automatically added to the training
+ * classpath by the plugin, so it does <em>not</em> need to be declared as a project
+ * dependency. After training, the core classes are also injected into the project's
+ * compile output directory ({@code target/classes}) so that they are included when the
+ * application is packaged. To ensure the core classes survive a {@code mvn clean},
+ * configure the {@code inject} goal to run during the {@code prepare-package} phase.
+ *
+ * <p>
  * Usage in {@code pom.xml}: <pre>{@code
  * <plugin>
  *     <groupId>com.fortytwotalents</groupId>
@@ -40,6 +48,7 @@ import java.util.concurrent.TimeUnit;
  *         <execution>
  *             <goals>
  *                 <goal>train</goal>
+ *                 <goal>inject</goal>
  *             </goals>
  *         </execution>
  *     </executions>
@@ -163,6 +172,11 @@ public class TrainMojo extends AbstractMojo {
 			// Copy to target directory
 			copyToTargetDirectory(outputFilePath);
 
+			// Inject core classes and resources into the build output directory so the
+			// optimizer works at runtime without requiring the core as a project
+			// dependency
+			injectCoreFiles();
+
 			getLog().info("Spring Boot Autoconfiguration Optimizer: Training run complete. "
 					+ "Properties file copied to: " + targetDirectory);
 
@@ -215,6 +229,13 @@ public class TrainMojo extends AbstractMojo {
 		// Add compiled classes
 		classpathEntries.add(project.getBuild().getOutputDirectory());
 
+		// Always include the optimizer core JAR so training works without the user
+		// declaring it as a project dependency
+		Path coreJar = CoreInjector.findCoreJar();
+		if (coreJar != null) {
+			classpathEntries.add(coreJar.toString());
+		}
+
 		// Add all compile and runtime dependencies
 		for (Artifact artifact : project.getArtifacts()) {
 			if (artifact.getFile() != null && (Artifact.SCOPE_COMPILE.equals(artifact.getScope())
@@ -251,10 +272,9 @@ public class TrainMojo extends AbstractMojo {
 			getLog().debug("Could not scan classes directory for main class: " + e.getMessage());
 		}
 
-		throw new MojoExecutionException(
-				"Could not determine main class. Please configure the 'mainClass' parameter, "
-						+ "set 'start-class' property in your project, or ensure the project is compiled "
-						+ "and contains a class annotated with @SpringBootApplication.");
+		throw new MojoExecutionException("Could not determine main class. Please configure the 'mainClass' parameter, "
+				+ "set 'start-class' property in your project, or ensure the project is compiled "
+				+ "and contains a class annotated with @SpringBootApplication.");
 	}
 
 	private void copyToTargetDirectory(Path sourceFile) throws IOException {
@@ -263,6 +283,25 @@ public class TrainMojo extends AbstractMojo {
 		Path targetFile = targetDir.resolve(outputFile);
 		Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
 		getLog().info("Spring Boot Autoconfiguration Optimizer: Copied training file to: " + targetFile);
+	}
+
+	private void injectCoreFiles() throws MojoExecutionException {
+		Path coreJar = CoreInjector.findCoreJar();
+		if (coreJar == null) {
+			getLog().debug(
+					"Spring Boot Autoconfiguration Optimizer: Core JAR not found as a file (running from directory). "
+							+ "Skipping core injection.");
+			return;
+		}
+		Path outputDir = Path.of(project.getBuild().getOutputDirectory());
+		try {
+			CoreInjector.injectCoreJarContents(coreJar, outputDir);
+			getLog()
+				.info("Spring Boot Autoconfiguration Optimizer: Core classes injected into build output: " + outputDir);
+		}
+		catch (IOException ex) {
+			throw new MojoExecutionException("Failed to inject optimizer core classes into build output", ex);
+		}
 	}
 
 }

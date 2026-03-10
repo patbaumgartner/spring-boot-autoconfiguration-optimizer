@@ -14,8 +14,8 @@ import java.util.stream.Stream;
 /**
  * Scans compiled class files to find a class annotated with
  * {@code @SpringBootApplication} or {@code @SpringBootConfiguration}, including
- * annotations that have {@code @SpringBootConfiguration} as a meta-annotation anywhere
- * in their annotation hierarchy.
+ * annotations that have {@code @SpringBootConfiguration} as a meta-annotation anywhere in
+ * their annotation hierarchy.
  *
  * <p>
  * The scan is done by inspecting raw class file bytes for annotation descriptor
@@ -106,8 +106,8 @@ class MainClassFinder {
 	/**
 	 * Returns {@code true} if the class file has the {@code ACC_ANNOTATION} (0x2000)
 	 * access flag set, indicating that it declares a Java annotation type. The constant
-	 * pool is parsed according to the JVM specification to locate the {@code access_flags}
-	 * field that immediately follows it.
+	 * pool is parsed according to the JVM specification to locate the
+	 * {@code access_flags} field that immediately follows it.
 	 */
 	private static boolean isAnnotationType(byte[] classBytes) {
 		if (classBytes.length < 10) {

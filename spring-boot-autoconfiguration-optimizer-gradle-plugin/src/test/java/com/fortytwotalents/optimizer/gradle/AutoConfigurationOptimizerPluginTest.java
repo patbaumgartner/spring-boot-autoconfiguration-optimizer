@@ -40,6 +40,28 @@ class AutoConfigurationOptimizerPluginTest {
     }
 
     @Test
+    void pluginRegistersInjectTask() throws IOException {
+        Files.writeString(projectDir.resolve("build.gradle"), """
+                plugins {
+                    id 'java'
+                    id 'com.fortytwotalents.autoconfiguration-optimizer'
+                }
+                """);
+
+        Files.writeString(projectDir.resolve("settings.gradle"), """
+                rootProject.name = 'test-project'
+                """);
+
+        BuildResult result = GradleRunner.create()
+                .withProjectDir(projectDir.toFile())
+                .withArguments("tasks", "--all")
+                .withPluginClasspath()
+                .build();
+
+        assertThat(result.getOutput()).contains("injectOptimizerCore");
+    }
+
+    @Test
     void pluginAppliesWithoutErrors() throws IOException {
         Files.writeString(projectDir.resolve("build.gradle"), """
                 plugins {

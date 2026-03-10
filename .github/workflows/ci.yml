@@ -68,6 +68,9 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Install Maven modules to local repository
+        run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -N && mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl autoconfiguration-optimizer-core
+
       - name: Build with Gradle
         working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin
         run: ./gradlew --no-daemon build
