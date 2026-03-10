@@ -1,14 +1,20 @@
 package com.fortytwotalents.optimizer;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 import org.springframework.mock.env.MockEnvironment;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class OptimizedAutoConfigurationImportFilterTest {
+
+	@TempDir
+	Path tempDir;
 
 	@Test
 	void match_returnsAllTrueWhenEnvironmentIsNull() {
@@ -166,6 +172,35 @@ class OptimizedAutoConfigurationImportFilterTest {
 		boolean[] result = filter.match(candidates, null);
 
 		assertThat(result).containsOnly(true);
+	}
+
+	@Test
+	void getAllowedConfigurations_excludesOptimizerOwnConfigEvenIfPresentInTrainingFile() throws Exception {
+		OptimizedAutoConfigurationImportFilter filter = new OptimizedAutoConfigurationImportFilter();
+		filter.setEnvironment(new MockEnvironment());
+
+		String optimizerConfig = AutoConfigurationOptimizerAutoConfiguration.class.getName();
+		String otherConfig = "com.example.FooAutoConfiguration";
+
+		// Build a temporary training file that lists the optimizer's own auto-config
+		Path metaInf = tempDir.resolve("META-INF");
+		Files.createDirectories(metaInf);
+		Files.writeString(metaInf.resolve("autoconfiguration-optimizer.properties"),
+				OptimizedAutoConfigurationImportFilter.LOADED_CONFIGURATIONS_KEY + "=" + optimizerConfig + ","
+						+ otherConfig);
+
+		// Use a ClassLoader that reads from the temp dir so the real loading code runs
+		try (java.net.URLClassLoader loader = new java.net.URLClassLoader(
+				new java.net.URL[] { tempDir.toUri().toURL() }, null)) {
+			filter.setBeanClassLoader(loader);
+
+			Set<String> allowed = filter.getAllowedConfigurations();
+
+			// The optimizer's own auto-configuration must be stripped during loading
+			assertThat(allowed).doesNotContain(optimizerConfig);
+			// Other configurations from the training file must still be present
+			assertThat(allowed).contains(otherConfig);
+		}
 	}
 
 }
