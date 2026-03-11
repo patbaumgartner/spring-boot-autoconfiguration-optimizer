@@ -48,9 +48,19 @@ jobs:
             --spring.main.banner-mode=off \
             --server.port=0 \
             --spring.jpa.show-sql=false &
+          TRAINING_PID=$!
 
-          # Wait for the training to complete (exit-after-training=true)
-          wait
+          # Wait for the training to complete (exit-after-training=true should terminate the app)
+          END_TIME=$(($(date +%s) + 120))
+          while kill -0 "${TRAINING_PID}" 2>/dev/null && [ "$(date +%s)" -lt "${END_TIME}" ]; do
+            sleep 1
+          done
+
+          if kill -0 "${TRAINING_PID}" 2>/dev/null; then
+            echo "::error::Training run (PID ${TRAINING_PID}) did not complete within 120 seconds, force-killing"
+            kill -9 "${TRAINING_PID}" 2>/dev/null || true
+          fi
+          wait "${TRAINING_PID}" 2>/dev/null || true
 
           echo "Training properties:"
           cat benchmarks/results/training/autoconfiguration-optimizer.properties
@@ -104,6 +114,12 @@ jobs:
             done
 
             kill "${JAVA_PID}" 2>/dev/null || true
+            # Give up to 5 s for graceful shutdown, then force-kill to prevent hanging
+            for shutdown_attempt in $(seq 1 10); do
+              if ! kill -0 "${JAVA_PID}" 2>/dev/null; then break; fi
+              sleep 0.5
+            done
+            kill -9 "${JAVA_PID}" 2>/dev/null || true
             wait "${JAVA_PID}" 2>/dev/null || true
             rm -f "${TMPFILE}"
 
@@ -150,6 +166,12 @@ jobs:
             done
 
             kill "${JAVA_PID}" 2>/dev/null || true
+            # Give up to 5 s for graceful shutdown, then force-kill to prevent hanging
+            for shutdown_attempt in $(seq 1 10); do
+              if ! kill -0 "${JAVA_PID}" 2>/dev/null; then break; fi
+              sleep 0.5
+            done
+            kill -9 "${JAVA_PID}" 2>/dev/null || true
             wait "${JAVA_PID}" 2>/dev/null || true
             rm -f "${TMPFILE}"
 
