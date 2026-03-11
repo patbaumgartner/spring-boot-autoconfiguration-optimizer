@@ -70,15 +70,17 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 							+ "Detected {} loaded auto-configurations out of {} available ({} excluded).",
 					loadedAutoConfigs.size(), availableAutoConfigs.size(),
 					availableAutoConfigs.size() - loadedAutoConfigs.size());
-
+		}
+		catch (Exception e) {
+			log.error("Spring Boot Autoconfiguration Optimizer: Training run failed"
+					+ " (loading/detecting auto-configurations or writing training file)", e);
+		}
+		finally {
 			if (properties.isExitAfterTraining()) {
 				log.info("Spring Boot Autoconfiguration Optimizer: Exiting after training run.");
 				int exitCode = SpringApplication.exit(event.getApplicationContext(), () -> 0);
 				System.exit(exitCode);
 			}
-		}
-		catch (IOException e) {
-			log.error("Spring Boot Autoconfiguration Optimizer: Failed to write training file", e);
 		}
 	}
 
