@@ -6,7 +6,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionEvaluationReport;
 import org.springframework.boot.context.annotation.ImportCandidates;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.ApplicationListener;
 
 import java.io.IOException;
@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
  * @see OptimizedAutoConfigurationImportFilter
  * @see AutoConfigurationOptimizerProperties
  */
-public class TrainingRunApplicationListener implements ApplicationListener<ApplicationReadyEvent> {
+public class TrainingRunApplicationListener implements ApplicationListener<ApplicationStartedEvent> {
 
 	private static final Logger log = LoggerFactory.getLogger(TrainingRunApplicationListener.class);
 
@@ -57,7 +57,7 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 	}
 
 	@Override
-	public void onApplicationEvent(ApplicationReadyEvent event) {
+	public void onApplicationEvent(ApplicationStartedEvent event) {
 		log.info("Spring Boot Autoconfiguration Optimizer: Training run started");
 
 		try {
