@@ -64,13 +64,6 @@
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- Optimizer core is provided by the plugin at runtime; use test scope here
-         so that training-run integration tests can reference its classes directly -->
-    <dependency>
-      <groupId>com.fortytwotalents</groupId>
-      <artifactId>autoconfiguration-optimizer-core</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
 
   <build>
