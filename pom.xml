@@ -13,7 +13,6 @@
   <modules>
     <module>autoconfiguration-optimizer-core</module>
     <module>spring-boot-autoconfiguration-optimizer-maven-plugin</module>
-    <module>integration-tests</module>
     <module>benchmarks</module>
   </modules>
 

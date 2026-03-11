@@ -11,3 +11,4 @@ autoconfiguration-optimizer-core/autoconfiguration-optimizer.properties
 BOOT-INF/
 benchmarks/dependency-reduced-pom.xml
 integration-tests/petclinic-sample/src/main/resources/META-INF/autoconfiguration-optimizer.properties
+integration-tests/petclinic-sample/autoconfiguration-optimizer.properties

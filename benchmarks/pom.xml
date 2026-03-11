@@ -38,11 +38,6 @@
       <groupId>com.fortytwotalents</groupId>
       <artifactId>autoconfiguration-optimizer-core</artifactId>
     </dependency>
-    <dependency>
-      <groupId>com.fortytwotalents</groupId>
-      <artifactId>autoconfiguration-optimizer-petclinic-sample</artifactId>
-      <version>${project.version}</version>
-    </dependency>
 
     <!-- Test -->
     <dependency>
