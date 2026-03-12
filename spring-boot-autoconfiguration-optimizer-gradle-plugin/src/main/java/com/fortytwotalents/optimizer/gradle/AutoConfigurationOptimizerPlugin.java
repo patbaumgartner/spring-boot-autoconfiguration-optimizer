@@ -3,7 +3,6 @@ package com.fortytwotalents.optimizer.gradle;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.plugins.JavaPluginExtension;
-import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskProvider;
 
@@ -101,23 +100,10 @@ public class AutoConfigurationOptimizerPlugin implements Plugin<Project> {
                 task.setGroup(TASK_GROUP);
                 task.setDescription("Injects optimizer core classes into the build output before packaging.");
 
-                JavaPluginExtension javaExtension = project.getExtensions().findByType(JavaPluginExtension.class);
-                if (javaExtension != null) {
-                    SourceSetContainer sourceSets = javaExtension.getSourceSets();
-                    SourceSet mainSourceSet = sourceSets.getByName("main");
-
-                    // Point the output directory at the first classes dir for the main source set
-                    task.getOutputDirectory().set(
-                            project.getLayout().getBuildDirectory().dir("classes/java/main")
-                    );
-
-                    // The training file whose presence triggers injection
-                    task.getTrainingFile().fileProvider(project.provider(() -> {
-                        File trainingFile = extension.getTargetDirectory().get().getAsFile().toPath()
-                                .resolve(extension.getOutputFile().get()).toFile();
-                        return trainingFile.exists() ? trainingFile : null;
-                    }));
-                }
+                // Point the output directory at the first classes dir for the main source set
+                task.getOutputDirectory().set(
+                        project.getLayout().getBuildDirectory().dir("classes/java/main")
+                );
             });
 
             // Make 'jar' depend on 'injectOptimizerCore' so the core classes are always

@@ -3,16 +3,7 @@ package com.fortytwotalents.optimizer.gradle;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputDirectory;
-import org.gradle.api.tasks.InputFile;
-import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
-import org.gradle.api.tasks.PathSensitive;
-import org.gradle.api.tasks.PathSensitivity;
-import org.gradle.api.tasks.SkipWhenEmpty;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.work.DisableCachingByDefault;
 
@@ -27,9 +18,12 @@ import java.nio.file.Path;
  *
  * <p>
  * This task is automatically wired to run before the {@code jar} task when the
- * {@link AutoConfigurationOptimizerPlugin} is applied. It only performs injection when a
- * training output file is present, so it is a no-op on projects that have not run
- * training yet.
+ * {@link AutoConfigurationOptimizerPlugin} is applied. The core is injected
+ * unconditionally so that the resulting JAR is always capable of performing a training
+ * run (even when no training file exists yet). When no training file is present at
+ * runtime the {@code OptimizedAutoConfigurationImportFilter} simply passes all
+ * auto-configurations through, so there is no behavioral change for unoptimized
+ * applications.
  *
  * <p>
  * Together with the {@link TrainTask}, this removes the requirement to declare
@@ -37,16 +31,6 @@ import java.nio.file.Path;
  */
 @DisableCachingByDefault(because = "Injects files into the build output directory; result depends on the core JAR on the plugin classpath")
 public abstract class InjectTask extends DefaultTask {
-
-	/**
-	 * The file whose presence indicates that a training run has been completed. Injection
-	 * is skipped when this file does not exist.
-	 */
-	@InputFile
-	@PathSensitive(PathSensitivity.NONE)
-	@Optional
-	@SkipWhenEmpty
-	public abstract RegularFileProperty getTrainingFile();
 
 	/**
 	 * The directory into which the core classes and resources are injected (typically the
