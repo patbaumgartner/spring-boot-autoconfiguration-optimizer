@@ -8,6 +8,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -37,7 +38,7 @@ public class VerifyMojo extends AbstractMojo {
 	 */
 	@Parameter(property = "autoconfiguration.optimizer.trainingFile",
 			defaultValue = "${project.basedir}/src/main/resources/META-INF/autoconfiguration-optimizer.properties")
-	private java.io.File trainingFile;
+	private File trainingFile;
 
 	/**
 	 * Whether to fail if the training file is missing.

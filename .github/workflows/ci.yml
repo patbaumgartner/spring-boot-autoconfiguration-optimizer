@@ -143,6 +143,181 @@ jobs:
           path: 'spring-boot-autoconfiguration-optimizer-gradle-plugin/build/test-results/**/*.xml'
           retention-days: 7
 
+  benchmark-smoke:
+    name: Benchmark Smoke Test
+    runs-on: ubuntu-latest
+    needs: [ integration-tests ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Install Maven plugin to local repository
+        run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl spring-boot-autoconfiguration-optimizer-maven-plugin -am
+
+      - name: Build project
+        run: mvn --batch-mode --no-transfer-progress package -DskipTests -f integration-tests/petclinic-sample/pom.xml
+
+      - name: Run training run
+        id: training
+        run: |
+          mkdir -p /tmp/benchmark-training
+          java \
+            -Dautoconfiguration.optimizer.training-run=true \
+            -Dautoconfiguration.optimizer.exit-after-training=true \
+            -Dautoconfiguration.optimizer.output-directory=/tmp/benchmark-training \
+            -Dautoconfiguration.optimizer.output-file=autoconfiguration-optimizer.properties \
+            -jar integration-tests/petclinic-sample/target/autoconfiguration-optimizer-petclinic-sample-*.jar \
+            --spring.main.banner-mode=off \
+            --server.port=0 \
+            --spring.jpa.show-sql=false &
+          TRAINING_PID=$!
+
+          END_TIME=$(($(date +%s) + 120))
+          while kill -0 "${TRAINING_PID}" 2>/dev/null && [ "$(date +%s)" -lt "${END_TIME}" ]; do
+            sleep 1
+          done
+
+          if kill -0 "${TRAINING_PID}" 2>/dev/null; then
+            echo "::error::Training run (PID ${TRAINING_PID}) did not complete within 120 seconds"
+            kill -9 "${TRAINING_PID}" 2>/dev/null || true
+            exit 1
+          fi
+          wait "${TRAINING_PID}" 2>/dev/null || true
+
+          echo "Training properties:"
+          cat /tmp/benchmark-training/autoconfiguration-optimizer.properties
+
+          TRAINING_AVAILABLE=$(grep -oP '(?<=# Total available auto-configurations: )\d+' /tmp/benchmark-training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_LOADED=$(grep -oP '(?<=# Total auto-configurations loaded: )\d+' /tmp/benchmark-training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations excluded: )\d+' /tmp/benchmark-training/autoconfiguration-optimizer.properties || echo "")
+          echo "training_available=${TRAINING_AVAILABLE}" >> $GITHUB_OUTPUT
+          echo "training_loaded=${TRAINING_LOADED}" >> $GITHUB_OUTPUT
+          echo "training_excluded=${TRAINING_EXCLUDED}" >> $GITHUB_OUTPUT
+
+      - name: Package optimized fat JAR
+        run: |
+          mkdir -p integration-tests/petclinic-sample/src/main/resources/META-INF
+          cp /tmp/benchmark-training/autoconfiguration-optimizer.properties \
+             integration-tests/petclinic-sample/src/main/resources/META-INF/
+          mvn --batch-mode --no-transfer-progress package -DskipTests \
+            -f integration-tests/petclinic-sample/pom.xml
+
+      - name: Measure baseline startup time
+        id: baseline
+        run: |
+          TMPFILE=$(mktemp)
+          java \
+            -Dautoconfiguration.optimizer.enabled=false \
+            -jar integration-tests/petclinic-sample/target/autoconfiguration-optimizer-petclinic-sample-*.jar \
+            --spring.main.banner-mode=off \
+            --server.port=0 \
+            --spring.jpa.show-sql=false > "${TMPFILE}" 2>&1 &
+          JAVA_PID=$!
+
+          OUTPUT=""
+          END_TIME=$(($(date +%s) + 60))
+          while [ "$(date +%s)" -lt "${END_TIME}" ]; do
+            OUTPUT=$(grep -m1 "Started .* in" "${TMPFILE}" 2>/dev/null || true)
+            if [ -n "${OUTPUT}" ]; then break; fi
+            if ! kill -0 "${JAVA_PID}" 2>/dev/null; then
+              OUTPUT=$(grep -m1 "Started .* in" "${TMPFILE}" 2>/dev/null || true)
+              break
+            fi
+            sleep 0.5
+          done
+
+          kill "${JAVA_PID}" 2>/dev/null || true
+          for attempt in $(seq 1 10); do
+            if ! kill -0 "${JAVA_PID}" 2>/dev/null; then break; fi
+            sleep 0.5
+          done
+          kill -9 "${JAVA_PID}" 2>/dev/null || true
+          wait "${JAVA_PID}" 2>/dev/null || true
+          rm -f "${TMPFILE}"
+
+          SECONDS_VAL=$(echo "${OUTPUT}" | grep -oP 'in \K[\d.]+(?= seconds)' || echo "")
+          if [ -n "${SECONDS_VAL}" ]; then
+            MS=$(printf "%.0f" $(echo "${SECONDS_VAL} * 1000" | bc))
+            echo "Baseline startup time: ${MS}ms"
+            echo "baseline_ms=${MS}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Measure optimized startup time
+        id: optimized
+        run: |
+          TMPFILE=$(mktemp)
+          java \
+            -jar integration-tests/petclinic-sample/target/autoconfiguration-optimizer-petclinic-sample-*.jar \
+            --spring.main.banner-mode=off \
+            --server.port=0 \
+            --spring.jpa.show-sql=false > "${TMPFILE}" 2>&1 &
+          JAVA_PID=$!
+
+          OUTPUT=""
+          END_TIME=$(($(date +%s) + 60))
+          while [ "$(date +%s)" -lt "${END_TIME}" ]; do
+            OUTPUT=$(grep -m1 "Started .* in" "${TMPFILE}" 2>/dev/null || true)
+            if [ -n "${OUTPUT}" ]; then break; fi
+            if ! kill -0 "${JAVA_PID}" 2>/dev/null; then
+              OUTPUT=$(grep -m1 "Started .* in" "${TMPFILE}" 2>/dev/null || true)
+              break
+            fi
+            sleep 0.5
+          done
+
+          kill "${JAVA_PID}" 2>/dev/null || true
+          for attempt in $(seq 1 10); do
+            if ! kill -0 "${JAVA_PID}" 2>/dev/null; then break; fi
+            sleep 0.5
+          done
+          kill -9 "${JAVA_PID}" 2>/dev/null || true
+          wait "${JAVA_PID}" 2>/dev/null || true
+          rm -f "${TMPFILE}"
+
+          SECONDS_VAL=$(echo "${OUTPUT}" | grep -oP 'in \K[\d.]+(?= seconds)' || echo "")
+          if [ -n "${SECONDS_VAL}" ]; then
+            MS=$(printf "%.0f" $(echo "${SECONDS_VAL} * 1000" | bc))
+            echo "Optimized startup time: ${MS}ms"
+            echo "optimized_ms=${MS}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post benchmark summary
+        run: |
+          BASELINE="${{ steps.baseline.outputs.baseline_ms }}"
+          OPTIMIZED="${{ steps.optimized.outputs.optimized_ms }}"
+
+          if [ -n "${BASELINE}" ] && [ -n "${OPTIMIZED}" ] && \
+             [ "${BASELINE}" -gt 0 ] && [ "${OPTIMIZED}" -gt 0 ]; then
+            IMPROVEMENT=$((BASELINE - OPTIMIZED))
+            PCT=$(echo "scale=1; ${IMPROVEMENT} * 100 / ${BASELINE}" | bc)
+          else
+            IMPROVEMENT="N/A"
+            PCT="N/A"
+          fi
+
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## 🚀 Benchmark Smoke Test: Spring Boot Autoconfiguration Optimizer
+
+          | Metric | Value |
+          |--------|-------|
+          | ⚪ Baseline startup time (1 run) | ${BASELINE:-N/A}ms |
+          | 🟢 Optimized startup time (1 run) | ${OPTIMIZED:-N/A}ms |
+          | 📈 Improvement | ${IMPROVEMENT}ms |
+          | 📊 Speed improvement | ${PCT}% faster |
+          | 🔎 Available auto-configurations | ${{ steps.training.outputs.training_available || 'N/A' }} |
+          | ✅ Loaded (training set) | ${{ steps.training.outputs.training_loaded || 'N/A' }} |
+          | ⛔ Excluded by optimizer | ${{ steps.training.outputs.training_excluded || 'N/A' }} |
+
+          *Single-iteration smoke test. For reliable measurements see the [Benchmarks workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/benchmarks.yml).*
+          EOF
+
   code-quality:
     name: Code Quality
     runs-on: ubuntu-latest

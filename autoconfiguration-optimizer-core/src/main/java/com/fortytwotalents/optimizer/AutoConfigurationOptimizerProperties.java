@@ -31,7 +31,7 @@ public class AutoConfigurationOptimizerProperties {
 	 * {@code TRAINING_RUN_JAVA_TOOL_OPTIONS} to set this during build. Default:
 	 * {@code false}
 	 */
-	private boolean trainingRun = false;
+	private boolean trainingRun;
 
 	/**
 	 * The name of the output file for the training run results. Default:
@@ -49,7 +49,7 @@ public class AutoConfigurationOptimizerProperties {
 	 * Whether to exit the application after a training run completes. Useful when the
 	 * application is started solely for the training run. Default: {@code false}
 	 */
-	private boolean exitAfterTraining = false;
+	private boolean exitAfterTraining;
 
 	public boolean isEnabled() {
 		return enabled;

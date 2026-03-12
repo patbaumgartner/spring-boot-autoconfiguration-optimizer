@@ -13,7 +13,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -65,15 +64,15 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 			List<String> loadedAutoConfigs = detectLoadedAutoConfigurations(availableAutoConfigs);
 			writeTrainingFile(loadedAutoConfigs, availableAutoConfigs.size());
 
-			log.info(
-					"Spring Boot Autoconfiguration Optimizer: Training run complete. "
-							+ "Detected {} loaded auto-configurations out of {} available ({} excluded).",
-					loadedAutoConfigs.size(), availableAutoConfigs.size(),
-					availableAutoConfigs.size() - loadedAutoConfigs.size());
+			log.atInfo()
+				.addArgument(() -> loadedAutoConfigs.size())
+				.addArgument(() -> availableAutoConfigs.size())
+				.addArgument(() -> availableAutoConfigs.size() - loadedAutoConfigs.size())
+				.log("Spring Boot Autoconfiguration Optimizer: Training run complete. "
+						+ "Detected {} loaded auto-configurations out of {} available ({} excluded).");
 		}
 		catch (Exception e) {
-			log.error("Spring Boot Autoconfiguration Optimizer: Training run failed"
-					+ " (loading/detecting auto-configurations or writing training file)", e);
+			log.error("Spring Boot Autoconfiguration Optimizer: Training run failed" + " (loading/detecting auto-configurations or writing training file)", e);
 		}
 		finally {
 			if (properties.isExitAfterTraining()) {
@@ -148,8 +147,9 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 		Set<String> autoConfigs = new HashSet<>(
 				ImportCandidates.load(AutoConfiguration.class, classLoader).getCandidates());
-		log.debug("Spring Boot Autoconfiguration Optimizer: Found {} available auto-configurations",
-				autoConfigs.size());
+		log.atDebug()
+			.addArgument(() -> autoConfigs.size())
+			.log("Spring Boot Autoconfiguration Optimizer: Found {} available auto-configurations");
 		return autoConfigs;
 	}
 
@@ -157,7 +157,7 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 	 * Writes the list of loaded auto-configurations to the output file.
 	 */
 	void writeTrainingFile(List<String> loadedAutoConfigs, int totalAvailableCount) throws IOException {
-		Path outputDir = Paths.get(properties.getOutputDirectory());
+		Path outputDir = Path.of(properties.getOutputDirectory());
 		Files.createDirectories(outputDir);
 
 		Path outputFile = outputDir.resolve(properties.getOutputFile());
@@ -190,7 +190,9 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 		}
 
 		Files.write(outputFile, lines, StandardCharsets.UTF_8);
-		log.info("Spring Boot Autoconfiguration Optimizer: Training file written to: {}", outputFile.toAbsolutePath());
+		log.atInfo()
+			.addArgument(() -> outputFile.toAbsolutePath())
+			.log("Spring Boot Autoconfiguration Optimizer: Training file written to: {}");
 	}
 
 }

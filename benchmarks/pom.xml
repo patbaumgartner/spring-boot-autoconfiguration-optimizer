@@ -15,8 +15,8 @@
         Measures startup time improvements achieved by excluding unused auto-configurations.</description>
 
   <properties>
-    <jmh.version>1.37</jmh.version>
     <benchmark.skip>true</benchmark.skip>
+    <jmh.version>1.37</jmh.version>
   </properties>
 
   <dependencies>
@@ -31,12 +31,6 @@
       <artifactId>jmh-generator-annprocess</artifactId>
       <version>${jmh.version}</version>
       <scope>provided</scope>
-    </dependency>
-
-    <!-- Core library -->
-    <dependency>
-      <groupId>com.fortytwotalents</groupId>
-      <artifactId>autoconfiguration-optimizer-core</artifactId>
     </dependency>
 
     <!-- Test -->
