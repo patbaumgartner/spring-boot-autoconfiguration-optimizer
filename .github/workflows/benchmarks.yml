@@ -15,8 +15,8 @@ permissions:
   contents: write
 
 jobs:
-  benchmark:
-    name: Startup Time Benchmarks
+  benchmark-maven:
+    name: Maven - Startup Time Benchmarks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -238,7 +238,7 @@ jobs:
       - name: Upload benchmark report
         uses: actions/upload-artifact@v7
         with:
-          name: benchmark-report
+          name: benchmark-report-maven
           path: benchmarks/results/
           retention-days: 90
 
@@ -257,7 +257,269 @@ jobs:
           fi
 
           cat >> $GITHUB_STEP_SUMMARY << EOF
-          ## 🚀 Benchmark Results: Spring Boot Autoconfiguration Optimizer
+          ## 🚀 Maven Benchmark Results: Spring Boot Autoconfiguration Optimizer
+
+          | Metric | Value |
+          |--------|-------|
+          | ⚪ Baseline startup time | ${BASELINE:-N/A}ms |
+          | 🟢 Optimized startup time | ${OPTIMIZED:-N/A}ms |
+          | 📈 Improvement | ${IMPROVEMENT}ms |
+          | 📊 Speed improvement | ${PCT}% faster |
+          | 🔎 Available auto-configurations | ${{ steps.training.outputs.training_available || 'N/A' }} |
+          | ✅ Loaded (training set) | ${{ steps.training.outputs.training_loaded || 'N/A' }} |
+          | ⛔ Excluded by optimizer | ${{ steps.training.outputs.training_excluded || 'N/A' }} |
+
+          *Target application: PetClinic Sample (Web + JPA + Actuator + Cache + Validation)*
+          EOF
+
+  benchmark-gradle:
+    name: Gradle - Startup Time Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Install Maven modules to local repository
+        run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -N && mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl autoconfiguration-optimizer-core
+
+      - name: Publish Gradle plugin to local Maven repository
+        working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin
+        run: ./gradlew --no-daemon publishToMavenLocal
+
+      - name: Build project
+        working-directory: integration-tests/petclinic-sample-gradle
+        run: ./gradlew --no-daemon bootJar
+
+      - name: Run training run on PetClinic
+        id: training
+        run: |
+          mkdir -p benchmarks/results-gradle/training
+          java \
+            -Dautoconfiguration.optimizer.training-run=true \
+            -Dautoconfiguration.optimizer.exit-after-training=true \
+            -Dautoconfiguration.optimizer.output-directory=benchmarks/results-gradle/training \
+            -Dautoconfiguration.optimizer.output-file=autoconfiguration-optimizer.properties \
+            -jar integration-tests/petclinic-sample-gradle/build/libs/*.jar \
+            --spring.main.banner-mode=off \
+            --server.port=0 \
+            --spring.jpa.show-sql=false &
+          TRAINING_PID=$!
+
+          # Wait for the training to complete (exit-after-training=true should terminate the app)
+          END_TIME=$(($(date +%s) + 120))
+          while kill -0 "${TRAINING_PID}" 2>/dev/null && [ "$(date +%s)" -lt "${END_TIME}" ]; do
+            sleep 1
+          done
+
+          if kill -0 "${TRAINING_PID}" 2>/dev/null; then
+            echo "::error::Training run (PID ${TRAINING_PID}) did not complete within 120 seconds, force-killing"
+            kill -9 "${TRAINING_PID}" 2>/dev/null || true
+          fi
+          wait "${TRAINING_PID}" 2>/dev/null || true
+
+          echo "Training properties:"
+          cat benchmarks/results-gradle/training/autoconfiguration-optimizer.properties
+
+          # Export stats to the environment for later steps
+          TRAINING_AVAILABLE=$(grep -oP '(?<=# Total available auto-configurations: )\d+' benchmarks/results-gradle/training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_LOADED=$(grep -oP '(?<=# Total auto-configurations loaded: )\d+' benchmarks/results-gradle/training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations excluded: )\d+' benchmarks/results-gradle/training/autoconfiguration-optimizer.properties || echo "")
+          echo "training_available=${TRAINING_AVAILABLE}" >> $GITHUB_OUTPUT
+          echo "training_loaded=${TRAINING_LOADED}" >> $GITHUB_OUTPUT
+          echo "training_excluded=${TRAINING_EXCLUDED}" >> $GITHUB_OUTPUT
+
+      - name: Package optimized fat JAR
+        run: |
+          # Copy the generated training properties into the application resources
+          # so it gets baked into the fat JAR - this is the real-world usage pattern
+          mkdir -p integration-tests/petclinic-sample/src/main/resources/META-INF
+          cp benchmarks/results-gradle/training/autoconfiguration-optimizer.properties \
+             integration-tests/petclinic-sample/src/main/resources/META-INF/
+
+          # Rebuild only the petclinic-gradle module to produce the optimized fat JAR
+          cd integration-tests/petclinic-sample-gradle && ./gradlew --no-daemon bootJar
+
+      - name: Run baseline measurements
+        id: baseline
+        run: |
+          TOTAL=0
+          COUNT=0
+          for i in $(seq 1 ${{ github.event.inputs.iterations || '5' }}); do
+            TMPFILE=$(mktemp)
+            java \
+              -Dautoconfiguration.optimizer.enabled=false \
+              -jar integration-tests/petclinic-sample-gradle/build/libs/*.jar \
+              --spring.main.banner-mode=off \
+              --server.port=0 \
+              --spring.jpa.show-sql=false > "${TMPFILE}" 2>&1 &
+            JAVA_PID=$!
+
+            OUTPUT=""
+            END_TIME=$(($(date +%s) + 60))
+            while [ "$(date +%s)" -lt "${END_TIME}" ]; do
+              OUTPUT=$(grep -m1 "Started .* in" "${TMPFILE}" 2>/dev/null || true)
+              if [ -n "${OUTPUT}" ]; then break; fi
+              if ! kill -0 "${JAVA_PID}" 2>/dev/null; then
+                # Process exited; do one final check before leaving the loop
+                OUTPUT=$(grep -m1 "Started .* in" "${TMPFILE}" 2>/dev/null || true)
+                break
+              fi
+              sleep 0.5
+            done
+
+            kill "${JAVA_PID}" 2>/dev/null || true
+            # Give up to 5 s for graceful shutdown, then force-kill to prevent hanging
+            for shutdown_attempt in $(seq 1 10); do
+              if ! kill -0 "${JAVA_PID}" 2>/dev/null; then break; fi
+              sleep 0.5
+            done
+            kill -9 "${JAVA_PID}" 2>/dev/null || true
+            wait "${JAVA_PID}" 2>/dev/null || true
+            rm -f "${TMPFILE}"
+
+            SECONDS_VAL=$(echo "${OUTPUT}" | grep -oP 'in \K[\d.]+(?= seconds)' || echo "")
+            if [ -n "${SECONDS_VAL}" ]; then
+              MS=$(printf "%.0f" $(echo "${SECONDS_VAL} * 1000" | bc))
+              TOTAL=$((TOTAL + MS))
+              COUNT=$((COUNT + 1))
+              echo "Baseline run ${i}: ${MS}ms"
+            fi
+          done
+
+          if [ ${COUNT} -gt 0 ]; then
+            AVG=$((TOTAL / COUNT))
+            echo "Baseline average: ${AVG}ms"
+            echo "baseline_avg=${AVG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run optimized measurements
+        id: optimized
+        run: |
+          TOTAL=0
+          COUNT=0
+          for i in $(seq 1 ${{ github.event.inputs.iterations || '5' }}); do
+            TMPFILE=$(mktemp)
+            java \
+              -jar integration-tests/petclinic-sample-gradle/build/libs/*.jar \
+              --spring.main.banner-mode=off \
+              --server.port=0 \
+              --spring.jpa.show-sql=false > "${TMPFILE}" 2>&1 &
+            JAVA_PID=$!
+
+            OUTPUT=""
+            END_TIME=$(($(date +%s) + 60))
+            while [ "$(date +%s)" -lt "${END_TIME}" ]; do
+              OUTPUT=$(grep -m1 "Started .* in" "${TMPFILE}" 2>/dev/null || true)
+              if [ -n "${OUTPUT}" ]; then break; fi
+              if ! kill -0 "${JAVA_PID}" 2>/dev/null; then
+                # Process exited; do one final check before leaving the loop
+                OUTPUT=$(grep -m1 "Started .* in" "${TMPFILE}" 2>/dev/null || true)
+                break
+              fi
+              sleep 0.5
+            done
+
+            kill "${JAVA_PID}" 2>/dev/null || true
+            # Give up to 5 s for graceful shutdown, then force-kill to prevent hanging
+            for shutdown_attempt in $(seq 1 10); do
+              if ! kill -0 "${JAVA_PID}" 2>/dev/null; then break; fi
+              sleep 0.5
+            done
+            kill -9 "${JAVA_PID}" 2>/dev/null || true
+            wait "${JAVA_PID}" 2>/dev/null || true
+            rm -f "${TMPFILE}"
+
+            SECONDS_VAL=$(echo "${OUTPUT}" | grep -oP 'in \K[\d.]+(?= seconds)' || echo "")
+            if [ -n "${SECONDS_VAL}" ]; then
+              MS=$(printf "%.0f" $(echo "${SECONDS_VAL} * 1000" | bc))
+              TOTAL=$((TOTAL + MS))
+              COUNT=$((COUNT + 1))
+              echo "Optimized run ${i}: ${MS}ms"
+            fi
+          done
+
+          if [ ${COUNT} -gt 0 ]; then
+            AVG=$((TOTAL / COUNT))
+            echo "Optimized average: ${AVG}ms"
+            echo "optimized_avg=${AVG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate benchmark report
+        run: |
+          mkdir -p benchmarks/results-gradle
+          BASELINE_AVG="${{ steps.baseline.outputs.baseline_avg }}"
+          OPTIMIZED_AVG="${{ steps.optimized.outputs.optimized_avg }}"
+          JAVA_VERSION=$(java -version 2>&1 | grep -oP '(?<=version ")[^"]+')
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          if [ -n "${BASELINE_AVG}" ] && [ -n "${OPTIMIZED_AVG}" ] && \
+             [ "${BASELINE_AVG}" -gt 0 ] && [ "${OPTIMIZED_AVG}" -gt 0 ]; then
+            IMPROVEMENT=$((BASELINE_AVG - OPTIMIZED_AVG))
+            IMPROVEMENT_PCT=$(echo "scale=1; ${IMPROVEMENT} * 100 / ${BASELINE_AVG}" | bc)
+          else
+            IMPROVEMENT=0
+            IMPROVEMENT_PCT="N/A"
+            BASELINE_AVG="${BASELINE_AVG:-N/A}"
+            OPTIMIZED_AVG="${OPTIMIZED_AVG:-N/A}"
+          fi
+
+          cat > benchmarks/results-gradle/benchmark-report.md << EOF
+          # Spring Boot Autoconfiguration Optimizer - Gradle Benchmark Results
+
+          **Generated:** ${TIMESTAMP}
+          **Java Version:** ${JAVA_VERSION}
+          **Build Tool:** Gradle
+          **Iterations:** ${{ github.event.inputs.iterations || '5' }}
+          **Target Application:** Spring PetClinic Sample (Web + JPA + Actuator + Cache + Validation)
+          **CI Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          ## Auto-Configuration Reduction
+
+          | Metric | Count |
+          |---|---|
+          | Total available auto-configurations | ${{ steps.training.outputs.training_available || 'N/A' }} |
+          | Loaded (training set) | ${{ steps.training.outputs.training_loaded || 'N/A' }} |
+          | Excluded by optimizer | ${{ steps.training.outputs.training_excluded || 'N/A' }} |
+
+          ## Startup Time Results
+
+          | Configuration | Average Startup Time |
+          |---|---|
+          | ⚪ Baseline (no optimizer) | ${BASELINE_AVG}ms |
+          | 🟢 Optimized (with optimizer) | ${OPTIMIZED_AVG}ms |
+          | **Improvement** | **${IMPROVEMENT}ms (${IMPROVEMENT_PCT}% faster)** |
+          EOF
+
+      - name: Upload benchmark report
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-report-gradle
+          path: benchmarks/results-gradle/
+          retention-days: 90
+
+      - name: Post benchmark summary
+        run: |
+          BASELINE="${{ steps.baseline.outputs.baseline_avg }}"
+          OPTIMIZED="${{ steps.optimized.outputs.optimized_avg }}"
+
+          if [ -n "${BASELINE}" ] && [ -n "${OPTIMIZED}" ] && \
+             [ "${BASELINE}" -gt 0 ] && [ "${OPTIMIZED}" -gt 0 ]; then
+            IMPROVEMENT=$((BASELINE - OPTIMIZED))
+            PCT=$(echo "scale=1; ${IMPROVEMENT} * 100 / ${BASELINE}" | bc)
+          else
+            IMPROVEMENT="N/A"
+            PCT="N/A"
+          fi
+
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## 🚀 Gradle Benchmark Results: Spring Boot Autoconfiguration Optimizer
 
           | Metric | Value |
           |--------|-------|
