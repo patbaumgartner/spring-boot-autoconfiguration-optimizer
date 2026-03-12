@@ -1,6 +1,0 @@
-com/fortytwotalents/optimizer/AutoConfigurationOptimizerProperties.class
-META-INF/spring-configuration-metadata.json
-com/fortytwotalents/optimizer/OptimizedAutoConfigurationImportFilter.class
-com/fortytwotalents/optimizer/AutoConfigurationOptimizerAutoConfiguration.class
-com/fortytwotalents/optimizer/TrainingRunApplicationListener.class
-com/fortytwotalents/optimizer/AutoConfigurationOptimizerRuntimeHints.class

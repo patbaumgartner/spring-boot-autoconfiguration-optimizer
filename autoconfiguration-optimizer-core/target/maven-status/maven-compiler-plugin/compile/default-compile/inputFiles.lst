@@ -1,5 +1,0 @@
-/home/runner/work/spring-boot-autoconfiguration-optimizer/spring-boot-autoconfiguration-optimizer/autoconfiguration-optimizer-core/src/main/java/com/fortytwotalents/optimizer/AutoConfigurationOptimizerAutoConfiguration.java
-/home/runner/work/spring-boot-autoconfiguration-optimizer/spring-boot-autoconfiguration-optimizer/autoconfiguration-optimizer-core/src/main/java/com/fortytwotalents/optimizer/AutoConfigurationOptimizerProperties.java
-/home/runner/work/spring-boot-autoconfiguration-optimizer/spring-boot-autoconfiguration-optimizer/autoconfiguration-optimizer-core/src/main/java/com/fortytwotalents/optimizer/AutoConfigurationOptimizerRuntimeHints.java
-/home/runner/work/spring-boot-autoconfiguration-optimizer/spring-boot-autoconfiguration-optimizer/autoconfiguration-optimizer-core/src/main/java/com/fortytwotalents/optimizer/OptimizedAutoConfigurationImportFilter.java
-/home/runner/work/spring-boot-autoconfiguration-optimizer/spring-boot-autoconfiguration-optimizer/autoconfiguration-optimizer-core/src/main/java/com/fortytwotalents/optimizer/TrainingRunApplicationListener.java
