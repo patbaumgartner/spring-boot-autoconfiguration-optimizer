@@ -22,7 +22,7 @@ repositories {
 
 dependencies {
     implementation gradleApi()
-    compileOnly 'com.fortytwotalents:autoconfiguration-optimizer-core:1.0.0-SNAPSHOT'
+    implementation 'com.fortytwotalents:autoconfiguration-optimizer-core:1.0.0-SNAPSHOT'
 
     testImplementation gradleTestKit()
     testImplementation platform('org.junit:junit-bom:6.0.3')

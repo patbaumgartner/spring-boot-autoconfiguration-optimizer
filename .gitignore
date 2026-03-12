@@ -36,6 +36,10 @@ out/
 ### VS Code ###
 .vscode/
 
+### Maven ###
+target/
+*.bak
+
 ### Other files to ignore ###
 benchmarks/dependency-reduced-pom.xml
 autoconfiguration-optimizer-core/autoconfiguration-optimizer.properties

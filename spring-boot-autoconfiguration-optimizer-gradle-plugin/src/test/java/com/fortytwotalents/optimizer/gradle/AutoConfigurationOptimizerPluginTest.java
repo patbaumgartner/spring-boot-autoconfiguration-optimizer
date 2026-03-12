@@ -86,4 +86,37 @@ class AutoConfigurationOptimizerPluginTest {
 
         assertThat(result.getOutput()).doesNotContain("ERROR");
     }
+
+    @Test
+    void bootJarDependsOnInjectTask() throws IOException {
+        // Minimal settings that pull Spring Boot from Gradle Plugin Portal
+        Files.writeString(projectDir.resolve("settings.gradle"), """
+                pluginManagement {
+                    repositories {
+                        gradlePluginPortal()
+                        mavenCentral()
+                    }
+                }
+                rootProject.name = 'test-project'
+                """);
+
+        Files.writeString(projectDir.resolve("build.gradle"), """
+                plugins {
+                    id 'java'
+                    id 'org.springframework.boot' version '4.0.3'
+                    id 'com.fortytwotalents.autoconfiguration-optimizer'
+                }
+                repositories {
+                    mavenCentral()
+                }
+                """);
+
+        BuildResult result = GradleRunner.create()
+                .withProjectDir(projectDir.toFile())
+                .withArguments("bootJar", "--dry-run")
+                .withPluginClasspath()
+                .build();
+
+        assertThat(result.getOutput()).contains(":injectOptimizerCore");
+    }
 }
