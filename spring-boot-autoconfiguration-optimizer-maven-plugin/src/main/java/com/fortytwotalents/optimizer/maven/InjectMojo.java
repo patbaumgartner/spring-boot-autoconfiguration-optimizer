@@ -7,9 +7,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
@@ -18,10 +16,12 @@ import java.nio.file.Path;
  *
  * <p>
  * This goal should be configured to run in the {@code prepare-package} phase so that the
- * optimizer core classes are present in the build output whenever the project is
- * packaged. It only performs injection when a training output file already exists
- * (indicating that a training run has been completed), so it is safe to include in every
- * build.
+ * optimizer core classes are present in the build output whenever the project is packaged.
+ * The core is injected unconditionally so that the resulting JAR is always capable of
+ * performing a training run (even when no training file exists yet). When no training file
+ * is present at runtime the {@code OptimizedAutoConfigurationImportFilter} simply passes
+ * all auto-configurations through, so there is no behavioral change for unoptimized
+ * applications.
  *
  * <p>
  * Together with the {@code train} goal, this eliminates the need to declare
@@ -55,21 +55,6 @@ public class InjectMojo extends AbstractMojo {
 	private MavenProject project;
 
 	/**
-	 * The directory that contains the training output file. Used to determine whether a
-	 * training run has been performed. Defaults to {@code src/main/resources/META-INF}.
-	 */
-	@Parameter(property = "autoconfiguration.optimizer.targetDirectory",
-			defaultValue = "${project.basedir}/src/main/resources/META-INF")
-	private File targetDirectory;
-
-	/**
-	 * The name of the training output file that must exist for injection to be performed.
-	 */
-	@Parameter(property = "autoconfiguration.optimizer.outputFile",
-			defaultValue = "autoconfiguration-optimizer.properties")
-	private String outputFile;
-
-	/**
 	 * Skip core injection.
 	 */
 	@Parameter(property = "autoconfiguration.optimizer.skip", defaultValue = "false")
@@ -79,15 +64,6 @@ public class InjectMojo extends AbstractMojo {
 	public void execute() throws MojoExecutionException {
 		if (skip) {
 			getLog().info("Spring Boot Autoconfiguration Optimizer: Core injection skipped.");
-			return;
-		}
-
-		// Only inject when a training file is present — this avoids unnecessary work on
-		// projects that have not run training yet.
-		Path trainingFile = targetDirectory.toPath().resolve(outputFile);
-		if (!Files.exists(trainingFile)) {
-			getLog().debug("Spring Boot Autoconfiguration Optimizer: No training file found at " + trainingFile
-					+ ". Skipping core injection.");
 			return;
 		}
 
