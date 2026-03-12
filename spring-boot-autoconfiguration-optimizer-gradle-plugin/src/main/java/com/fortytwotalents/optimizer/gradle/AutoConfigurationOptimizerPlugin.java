@@ -115,8 +115,11 @@ public class AutoConfigurationOptimizerPlugin implements Plugin<Project> {
             // depend on the regular 'jar' task, so they must be wired independently.
             // This mirrors the Maven plugin's 'inject' goal which runs at
             // prepare-package phase (before the fat JAR is assembled).
+            // 'resolveMainClassName' also scans the classes directory written by
+            // 'injectOptimizerCore', so it must be declared as a dependant too.
             project.getPlugins().withId("org.springframework.boot", plugin -> {
                 project.getTasks().named("bootJar").configure(task -> task.dependsOn(INJECT_TASK_NAME));
+                project.getTasks().named("resolveMainClassName").configure(task -> task.dependsOn(INJECT_TASK_NAME));
                 project.getPlugins().withId("war", warPlugin ->
                     project.getTasks().named("bootWar").configure(task -> task.dependsOn(INJECT_TASK_NAME)));
             });
