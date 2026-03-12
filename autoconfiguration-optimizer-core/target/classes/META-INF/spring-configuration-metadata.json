@@ -1,0 +1,50 @@
+{
+  "groups": [
+    {
+      "name": "autoconfiguration.optimizer",
+      "type": "com.fortytwotalents.optimizer.AutoConfigurationOptimizerProperties",
+      "sourceType": "com.fortytwotalents.optimizer.AutoConfigurationOptimizerProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "autoconfiguration.optimizer.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether the autoconfiguration optimizer is enabled. When enabled and a training file is present, only the listed auto-configurations will be loaded. Default: {@code true}",
+      "sourceType": "com.fortytwotalents.optimizer.AutoConfigurationOptimizerProperties",
+      "defaultValue": true
+    },
+    {
+      "name": "autoconfiguration.optimizer.exit-after-training",
+      "type": "java.lang.Boolean",
+      "description": "Whether to exit the application after a training run completes. Useful when the application is started solely for the training run. Default: {@code false}",
+      "sourceType": "com.fortytwotalents.optimizer.AutoConfigurationOptimizerProperties",
+      "defaultValue": false
+    },
+    {
+      "name": "autoconfiguration.optimizer.output-directory",
+      "type": "java.lang.String",
+      "description": "The output directory for the training run results file. Default: {@code .} (current working directory)",
+      "sourceType": "com.fortytwotalents.optimizer.AutoConfigurationOptimizerProperties",
+      "defaultValue": "."
+    },
+    {
+      "name": "autoconfiguration.optimizer.output-file",
+      "type": "java.lang.String",
+      "description": "The name of the output file for the training run results. Default: {@code autoconfiguration-optimizer.properties}",
+      "sourceType": "com.fortytwotalents.optimizer.AutoConfigurationOptimizerProperties",
+      "defaultValue": "autoconfiguration-optimizer.properties"
+    },
+    {
+      "name": "autoconfiguration.optimizer.training-run",
+      "type": "java.lang.Boolean",
+      "description": "Whether this is a training run. During a training run, all auto-configurations are loaded and the ones that are active are recorded to a file. Use {@code TRAINING_RUN_JAVA_TOOL_OPTIONS} to set this during build. Default: {@code false}",
+      "sourceType": "com.fortytwotalents.optimizer.AutoConfigurationOptimizerProperties",
+      "defaultValue": false
+    }
+  ],
+  "hints": [],
+  "ignored": {
+    "properties": []
+  }
+}

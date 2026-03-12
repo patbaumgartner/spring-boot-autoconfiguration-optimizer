@@ -1,0 +1,3 @@
+/home/runner/work/spring-boot-autoconfiguration-optimizer/spring-boot-autoconfiguration-optimizer/autoconfiguration-optimizer-core/src/test/java/com/fortytwotalents/optimizer/AutoConfigurationOptimizerIntegrationTest.java
+/home/runner/work/spring-boot-autoconfiguration-optimizer/spring-boot-autoconfiguration-optimizer/autoconfiguration-optimizer-core/src/test/java/com/fortytwotalents/optimizer/OptimizedAutoConfigurationImportFilterTest.java
+/home/runner/work/spring-boot-autoconfiguration-optimizer/spring-boot-autoconfiguration-optimizer/autoconfiguration-optimizer-core/src/test/java/com/fortytwotalents/optimizer/TrainingRunApplicationListenerTest.java
