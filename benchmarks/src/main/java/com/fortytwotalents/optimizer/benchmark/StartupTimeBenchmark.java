@@ -19,9 +19,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -48,7 +47,7 @@ import java.util.regex.Pattern;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Warmup(iterations = 3, time = 1)
 @Measurement(iterations = 5, time = 1)
-@Fork(value = 1, jvmArgsAppend = { "-Xmx256m" })
+@Fork(value = 1, jvmArgsAppend = {"-Xmx256m"})
 public class StartupTimeBenchmark {
 
 	private static final Pattern STARTED_PATTERN = Pattern.compile("Started .+ in ([\\d.]+) seconds");
@@ -59,7 +58,7 @@ public class StartupTimeBenchmark {
 
 	@Setup
 	public void setup() {
-		javaExecutable = Paths.get(System.getProperty("java.home"), "bin", "java").toString();
+		javaExecutable = Path.of(System.getProperty("java.home"), "bin", "java").toString();
 
 		// Find the PetClinic JAR
 		String jarPath = System.getProperty("petclinic.jar");

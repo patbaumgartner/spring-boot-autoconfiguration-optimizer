@@ -10,7 +10,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -92,12 +91,12 @@ final class CoreInjector {
 									+ canonicalOutputDir + "'. Aborting injection.");
 				}
 
-				if (name.equals(SPRING_FACTORIES)) {
+				if (SPRING_FACTORIES.equals(name)) {
 					try (InputStream is = jarFile.getInputStream(entry)) {
 						mergeSpringFactories(is, targetPath);
 					}
 				}
-				else if (name.equals(AUTOCONFIG_IMPORTS)) {
+				else if (AUTOCONFIG_IMPORTS.equals(name)) {
 					try (InputStream is = jarFile.getInputStream(entry)) {
 						mergeLineBasedFile(is, targetPath);
 					}
@@ -115,7 +114,7 @@ final class CoreInjector {
 	}
 
 	private static boolean shouldSkipEntry(String name) {
-		if (name.equals("META-INF/MANIFEST.MF")) {
+		if ("META-INF/MANIFEST.MF".equals(name)) {
 			return true;
 		}
 		// Skip JAR signature files

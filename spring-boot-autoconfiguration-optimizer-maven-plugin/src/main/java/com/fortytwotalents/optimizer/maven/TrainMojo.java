@@ -14,7 +14,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
@@ -195,7 +194,7 @@ public class TrainMojo extends AbstractMojo {
 
 		// Java executable
 		String javaHome = System.getProperty("java.home");
-		String javaExec = Paths.get(javaHome, "bin", "java").toString();
+		String javaExec = Path.of(javaHome, "bin", "java").toString();
 		command.add(javaExec);
 
 		// JVM arguments
@@ -260,7 +259,7 @@ public class TrainMojo extends AbstractMojo {
 
 		// Try to auto-detect by scanning compiled classes for @SpringBootApplication
 		// or @SpringBootConfiguration
-		Path outputDirectory = Paths.get(project.getBuild().getOutputDirectory());
+		Path outputDirectory = Path.of(project.getBuild().getOutputDirectory());
 		try {
 			Optional<String> detected = MainClassFinder.findMainClass(outputDirectory);
 			if (detected.isPresent()) {

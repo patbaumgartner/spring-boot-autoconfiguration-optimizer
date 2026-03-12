@@ -1,5 +1,6 @@
 package com.fortytwotalents.optimizer.maven;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -7,7 +8,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Properties;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -32,7 +36,7 @@ class CoreInjectorTest {
 	}
 
 	@Test
-	void injectCoreJarContentsCreatesClassFiles() throws IOException {
+	void injectCoreJarContentsCreatesClassFiles() throws Exception {
 		Path coreJar = CoreInjector.findCoreJar();
 		if (coreJar == null) {
 			// Running from exploded directory — skip this test
@@ -58,7 +62,7 @@ class CoreInjectorTest {
 	}
 
 	@Test
-	void injectCoreJarContentsMergesExistingSpringFactories() throws IOException {
+	void injectCoreJarContentsMergesExistingSpringFactories() throws Exception {
 		Path coreJar = CoreInjector.findCoreJar();
 		if (coreJar == null) {
 			return;
@@ -90,7 +94,7 @@ class CoreInjectorTest {
 	}
 
 	@Test
-	void injectCoreJarContentsMergesExistingAutoConfigurationImports() throws IOException {
+	void injectCoreJarContentsMergesExistingAutoConfigurationImports() throws Exception {
 		Path coreJar = CoreInjector.findCoreJar();
 		if (coreJar == null) {
 			return;
@@ -117,7 +121,7 @@ class CoreInjectorTest {
 	}
 
 	@Test
-	void injectCoreJarContentsIsIdempotent() throws IOException {
+	void injectCoreJarContentsIsIdempotent() throws Exception {
 		Path coreJar = CoreInjector.findCoreJar();
 		if (coreJar == null) {
 			return;
@@ -136,7 +140,7 @@ class CoreInjectorTest {
 		}
 		String filterValue = props.getProperty("org.springframework.boot.autoconfigure.AutoConfigurationImportFilter",
 				"");
-		long count = java.util.Arrays.stream(filterValue.split(","))
+		long count = Arrays.stream(filterValue.split(","))
 			.map(String::trim)
 			.filter(s -> s.contains("OptimizedAutoConfigurationImportFilter"))
 			.count();
@@ -144,20 +148,20 @@ class CoreInjectorTest {
 	}
 
 	@Test
-	void injectCoreJarContentsRejectsTraversalEntries() throws IOException {
+	void injectCoreJarContentsRejectsTraversalEntries() throws Exception {
 		// Build a minimal JAR containing a Zip Slip entry (../../evil.txt)
 		Path maliciousJar = tempDir.resolve("malicious.jar");
-		try (var jos = new java.util.jar.JarOutputStream(Files.newOutputStream(maliciousJar))) {
-			java.util.jar.JarEntry entry = new java.util.jar.JarEntry("../../evil.txt");
+		try (var jos = new JarOutputStream(Files.newOutputStream(maliciousJar))) {
+			JarEntry entry = new JarEntry("../../evil.txt");
 			jos.putNextEntry(entry);
-			jos.write("pwned".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+			jos.write("pwned".getBytes(StandardCharsets.UTF_8));
 			jos.closeEntry();
 		}
 
 		Path outputDir = tempDir.resolve("classes-slip");
 		Files.createDirectories(outputDir);
 
-		org.assertj.core.api.Assertions
+		Assertions
 			.assertThatThrownBy(() -> CoreInjector.injectCoreJarContents(maliciousJar, outputDir))
 			.isInstanceOf(IOException.class)
 			.hasMessageContaining("Zip Slip");

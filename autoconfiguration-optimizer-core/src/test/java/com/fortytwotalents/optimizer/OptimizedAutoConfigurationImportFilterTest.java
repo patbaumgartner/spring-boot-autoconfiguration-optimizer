@@ -5,6 +5,8 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 import org.springframework.mock.env.MockEnvironment;
 
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
@@ -20,7 +22,7 @@ class OptimizedAutoConfigurationImportFilterTest {
 	void match_returnsAllTrueWhenEnvironmentIsNull() {
 		OptimizedAutoConfigurationImportFilter filter = new OptimizedAutoConfigurationImportFilter();
 		// No environment set — filter should pass everything through
-		String[] candidates = { "com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration" };
+		String[] candidates = {"com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration"};
 
 		boolean[] result = filter.match(candidates, null);
 
@@ -34,7 +36,7 @@ class OptimizedAutoConfigurationImportFilterTest {
 		env.setProperty("autoconfiguration.optimizer.enabled", "false");
 		filter.setEnvironment(env);
 
-		String[] candidates = { "com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration" };
+		String[] candidates = {"com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration"};
 
 		boolean[] result = filter.match(candidates, null);
 
@@ -48,7 +50,7 @@ class OptimizedAutoConfigurationImportFilterTest {
 		env.setProperty("autoconfiguration.optimizer.training-run", "true");
 		filter.setEnvironment(env);
 
-		String[] candidates = { "com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration" };
+		String[] candidates = {"com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration"};
 
 		boolean[] result = filter.match(candidates, null);
 
@@ -62,7 +64,7 @@ class OptimizedAutoConfigurationImportFilterTest {
 		// No training file on test classpath at the expected location — returns null
 		// meaning "allow all"
 
-		String[] candidates = { "com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration" };
+		String[] candidates = {"com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration"};
 
 		boolean[] result = filter.match(candidates, null);
 
@@ -80,8 +82,8 @@ class OptimizedAutoConfigurationImportFilterTest {
 				"com.example.BazAutoConfiguration");
 		Mockito.doReturn(allCandidates).when(filter).getAllCandidates();
 
-		String[] candidates = { "com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration",
-				"com.example.BazAutoConfiguration" };
+		String[] candidates = {"com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration",
+				"com.example.BazAutoConfiguration"};
 
 		boolean[] result = filter.match(candidates, null);
 
@@ -104,8 +106,8 @@ class OptimizedAutoConfigurationImportFilterTest {
 			.when(filter)
 			.getAllCandidates();
 
-		String[] candidates = { "com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration",
-				"com.example.SomeAutoConfiguration$ProgrammaticInnerConfig" };
+		String[] candidates = {"com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration",
+				"com.example.SomeAutoConfiguration$ProgrammaticInnerConfig"};
 
 		boolean[] result = filter.match(candidates, null);
 
@@ -126,7 +128,7 @@ class OptimizedAutoConfigurationImportFilterTest {
 			.getAllCandidates();
 
 		// null entries represent candidates already removed by an earlier filter
-		String[] candidates = { null, "com.example.BarAutoConfiguration" };
+		String[] candidates = {null, "com.example.BarAutoConfiguration"};
 
 		boolean[] result = filter.match(candidates, null);
 
@@ -167,7 +169,7 @@ class OptimizedAutoConfigurationImportFilterTest {
 		Mockito.doReturn(allowed).when(filter).getAllowedConfigurations();
 		Mockito.doReturn(allowed).when(filter).getAllCandidates();
 
-		String[] candidates = { "com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration" };
+		String[] candidates = {"com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration"};
 
 		boolean[] result = filter.match(candidates, null);
 
@@ -190,8 +192,7 @@ class OptimizedAutoConfigurationImportFilterTest {
 						+ otherConfig);
 
 		// Use a ClassLoader that reads from the temp dir so the real loading code runs
-		try (java.net.URLClassLoader loader = new java.net.URLClassLoader(
-				new java.net.URL[] { tempDir.toUri().toURL() }, null)) {
+		try (URLClassLoader loader = new URLClassLoader(new URL[]{tempDir.toUri().toURL()}, null)) {
 			filter.setBeanClassLoader(loader);
 
 			Set<String> allowed = filter.getAllowedConfigurations();

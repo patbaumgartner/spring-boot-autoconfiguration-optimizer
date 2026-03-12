@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.autoconfigure.condition.ConditionEvaluationReport;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -20,7 +19,7 @@ class TrainingRunApplicationListenerTest {
 	Path tempDir;
 
 	@Test
-	void writeTrainingFile_createsFileWithLoadedConfigurations() throws IOException {
+	void writeTrainingFile_createsFileWithLoadedConfigurations() throws Exception {
 		AutoConfigurationOptimizerProperties properties = new AutoConfigurationOptimizerProperties();
 		properties.setOutputDirectory(tempDir.toString());
 		properties.setOutputFile("test-training.properties");
@@ -48,7 +47,7 @@ class TrainingRunApplicationListenerTest {
 	}
 
 	@Test
-	void writeTrainingFile_handlesEmptyConfigurationList() throws IOException {
+	void writeTrainingFile_handlesEmptyConfigurationList() throws Exception {
 		AutoConfigurationOptimizerProperties properties = new AutoConfigurationOptimizerProperties();
 		properties.setOutputDirectory(tempDir.toString());
 		properties.setOutputFile("empty-training.properties");
@@ -69,7 +68,7 @@ class TrainingRunApplicationListenerTest {
 	}
 
 	@Test
-	void loadAvailableAutoConfigurations_loadsFromClasspath() throws IOException {
+	void loadAvailableAutoConfigurations_loadsFromClasspath() throws Exception {
 		AutoConfigurationOptimizerProperties properties = new AutoConfigurationOptimizerProperties();
 		ConditionEvaluationReport report = mock(ConditionEvaluationReport.class);
 		TrainingRunApplicationListener listener = new TrainingRunApplicationListener(properties, report);
@@ -80,7 +79,7 @@ class TrainingRunApplicationListenerTest {
 	}
 
 	@Test
-	void detectLoadedAutoConfigurations_returnsMatchedConfigs() throws IOException {
+	void detectLoadedAutoConfigurations_returnsMatchedConfigs() throws Exception {
 		AutoConfigurationOptimizerProperties properties = new AutoConfigurationOptimizerProperties();
 		ConditionEvaluationReport report = mock(ConditionEvaluationReport.class);
 

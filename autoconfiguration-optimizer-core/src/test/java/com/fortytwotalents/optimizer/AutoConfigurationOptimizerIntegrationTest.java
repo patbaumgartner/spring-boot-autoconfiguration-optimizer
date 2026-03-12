@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Integration tests verifying the autoconfiguration optimizer in training mode.
  */
 @SpringBootTest(classes = AutoConfigurationOptimizerIntegrationTest.TestApp.class, properties = {
-		"autoconfiguration.optimizer.training-run=true", "autoconfiguration.optimizer.exit-after-training=false" })
+		"autoconfiguration.optimizer.training-run=true", "autoconfiguration.optimizer.exit-after-training=false"})
 class AutoConfigurationOptimizerIntegrationTest {
 
 	@Autowired

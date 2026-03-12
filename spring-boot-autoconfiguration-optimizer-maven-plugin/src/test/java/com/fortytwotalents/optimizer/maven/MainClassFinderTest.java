@@ -19,7 +19,7 @@ class MainClassFinderTest {
 	Path tempDir;
 
 	@Test
-	void findsClassAnnotatedWithSpringBootApplication() throws IOException {
+	void findsClassAnnotatedWithSpringBootApplication() throws Exception {
 		Path classDir = createClassFile("com/example/MyApplication.class",
 				"Lorg/springframework/boot/autoconfigure/SpringBootApplication;");
 
@@ -29,7 +29,7 @@ class MainClassFinderTest {
 	}
 
 	@Test
-	void findsClassAnnotatedWithSpringBootConfiguration() throws IOException {
+	void findsClassAnnotatedWithSpringBootConfiguration() throws Exception {
 		Path classDir = createClassFile("com/example/MyApp.class",
 				"Lorg/springframework/boot/SpringBootConfiguration;");
 
@@ -39,7 +39,7 @@ class MainClassFinderTest {
 	}
 
 	@Test
-	void findsClassAnnotatedWithCustomMetaAnnotation() throws IOException {
+	void findsClassAnnotatedWithCustomMetaAnnotation() throws Exception {
 		// Custom annotation that is itself meta-annotated with @SpringBootConfiguration
 		Path classDir = tempDir.resolve("classes-meta");
 		createAnnotationClassFileInDir(classDir, "com/example/MyBootApp.class",
@@ -54,7 +54,7 @@ class MainClassFinderTest {
 	}
 
 	@Test
-	void doesNotReturnAnnotationClassAsMainClass() throws IOException {
+	void doesNotReturnAnnotationClassAsMainClass() throws Exception {
 		// Only the annotation class is present; there is no application class annotated
 		// with it, so no main class should be found.
 		Path classDir = tempDir.resolve("classes-ann-only");
@@ -67,11 +67,11 @@ class MainClassFinderTest {
 	}
 
 	@Test
-	void returnsEmptyWhenNoAnnotatedClassFound() throws IOException {
+	void returnsEmptyWhenNoAnnotatedClassFound() throws Exception {
 		Path classDir = tempDir.resolve("classes");
 		Files.createDirectories(classDir.resolve("com/example"));
 		Files.write(classDir.resolve("com/example/Other.class"),
-				new byte[] { (byte) 0xCA, (byte) 0xFE, (byte) 0xBA, (byte) 0xBE });
+				new byte[]{(byte) 0xCA, (byte) 0xFE, (byte) 0xBA, (byte) 0xBE});
 
 		Optional<String> result = MainClassFinder.findMainClass(classDir);
 
@@ -79,7 +79,7 @@ class MainClassFinderTest {
 	}
 
 	@Test
-	void returnsEmptyForNonExistentDirectory() throws IOException {
+	void returnsEmptyForNonExistentDirectory() throws Exception {
 		Optional<String> result = MainClassFinder.findMainClass(tempDir.resolve("nonexistent"));
 
 		assertThat(result).isEmpty();
@@ -103,8 +103,8 @@ class MainClassFinderTest {
 		Files.createDirectories(classFile.getParent());
 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		baos.write(new byte[] { (byte) 0xCA, (byte) 0xFE, (byte) 0xBA, (byte) 0xBE });
-		baos.write(new byte[] { 0, 0, 0, 61 });
+		baos.write(new byte[]{(byte) 0xCA, (byte) 0xFE, (byte) 0xBA, (byte) 0xBE});
+		baos.write(new byte[]{0, 0, 0, 61});
 		baos.write(annotationDescriptor.getBytes(StandardCharsets.UTF_8));
 
 		Files.write(classFile, baos.toByteArray());
