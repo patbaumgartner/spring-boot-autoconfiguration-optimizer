@@ -109,6 +109,20 @@ public class AutoConfigurationOptimizerPlugin implements Plugin<Project> {
             // Make 'jar' depend on 'injectOptimizerCore' so the core classes are always
             // present when the project is packaged (after a training run)
             project.getTasks().named("jar").configure(jar -> jar.dependsOn(INJECT_TASK_NAME));
+
+            // Make 'bootJar' and 'bootWar' depend on 'injectOptimizerCore' as well.
+            // Spring Boot fat archives are produced by their own tasks that do NOT
+            // depend on the regular 'jar' task, so they must be wired independently.
+            // This mirrors the Maven plugin's 'inject' goal which runs at
+            // prepare-package phase (before the fat JAR is assembled).
+            // 'resolveMainClassName' also scans the classes directory written by
+            // 'injectOptimizerCore', so it must be declared as a dependant too.
+            project.getPlugins().withId("org.springframework.boot", plugin -> {
+                project.getTasks().named("bootJar").configure(task -> task.dependsOn(INJECT_TASK_NAME));
+                project.getTasks().named("resolveMainClassName").configure(task -> task.dependsOn(INJECT_TASK_NAME));
+                project.getPlugins().withId("war", warPlugin ->
+                    project.getTasks().named("bootWar").configure(task -> task.dependsOn(INJECT_TASK_NAME)));
+            });
         });
 
         // Also add a copy task that copies the generated file to the target directory
