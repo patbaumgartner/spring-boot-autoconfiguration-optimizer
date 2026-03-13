@@ -12,16 +12,16 @@
 
 ## Why Bother?
 
-Spring Boot evaluates hundreds of `@Conditional` annotations at every startup — even for auto-configurations that will never apply to your application. This optimizer records which ones actually matched during a training run and permanently skips the rest on every subsequent start.
+Spring Boot evaluates hundreds of `@Conditional` annotations at every startup, even for auto-configurations that will never apply to your application. This optimizer records which ones actually matched during a training run and permanently skips the rest on every subsequent start.
 
 The result: fewer condition evaluations, faster startup, and zero changes to your application code.
 
 ## How It Works
 
-1. **Inject** — Add the plugin to your build. The `inject` goal/task automatically embeds the optimizer core into your packaged JAR. No separate dependency declaration is needed.
-2. **Training Run** — Start your application once with training mode enabled. The optimizer captures every auto-configuration that passed its conditions and writes the list to `META-INF/autoconfiguration-optimizer.properties`. Commit this file so it is baked into subsequent builds. **This step is required to get any optimization benefit** — without the training file, the optimizer is a no-op.
-3. **Subsequent Starts** — An `AutoConfigurationImportFilter` reads the file at startup and directly restricts which auto-configurations Spring Boot imports to only those in the training set.
-4. **Safe by Default** — If the training file is missing (e.g., before the first training run), the optimizer does nothing and Spring Boot starts as usual.
+1. **Training Run**: Start your application once with training mode enabled. The optimizer captures every auto-configuration that passed its conditions and writes the list to `META-INF/autoconfiguration-optimizer.properties`. Commit this file so it is baked into subsequent builds. **This step is required to get any optimization benefit** - without the training file, the optimizer is a no-op.
+2. **Inject**: Add the plugin to your build. The `inject` goal/task automatically embeds the optimizer core into your packaged JAR. No separate dependency declaration is needed.
+3. **Subsequent Starts**: An `AutoConfigurationImportFilter` reads the file at startup and directly restricts which auto-configurations Spring Boot imports to only those in the training set.
+4. **Safe by Default**: If the training file is missing (e.g., before the first training run), the optimizer does nothing and Spring Boot starts as usual.
 
 ```
 Training Run                    Production Run
@@ -43,7 +43,7 @@ optimizer.properties            condition evaluation for all
 The optimizer uses Spring Boot's `AutoConfigurationImportFilter` extension point rather than setting `spring.autoconfigure.exclude`. This is more efficient because:
 
 - **Single pass**: The list of auto-configuration candidates is loaded only once by Spring Boot's `AutoConfigurationImportSelector`, not twice (once in an `EnvironmentPostProcessor` and once again inside the selector).
-- **No string manipulation**: Filtering is done via a simple `boolean[]` array operation on the candidate strings — no comma-separated list building or property parsing required.
+- **No string manipulation**: Filtering is done via a simple `boolean[]` array operation on the candidate strings with no comma-separated list building or property parsing required.
 - **Right extension point**: The filter runs directly inside the auto-configuration import pipeline, at the earliest possible moment before any auto-configuration class is loaded or its conditions evaluated.
 - **Forward-compatible**: `EnvironmentPostProcessor` is deprecated for removal in Spring Boot 4; `AutoConfigurationImportFilter` is the recommended approach.
 
@@ -60,7 +60,7 @@ The actual improvement depends on how many Spring Boot starters your application
 
 ### Maven
 
-Add the plugin to your `pom.xml`. The `inject` goal embeds the optimizer core into your packaged JAR — no explicit core dependency needed. Then run the `train` goal once to generate the optimizer properties file:
+Add the plugin to your `pom.xml`. The `inject` goal embeds the optimizer core into your packaged JAR with no explicit core dependency needed. Then run the `train` goal once to generate the optimizer properties file:
 
 ```xml
 <plugin>
@@ -105,7 +105,7 @@ Re-run training whenever your application's dependencies change significantly.
 
 ### Gradle
 
-Apply the plugin — the optimizer core is automatically injected into your `bootJar` output:
+Apply the plugin: the optimizer core is automatically injected into your `bootJar` output:
 
 ```groovy
 plugins {
@@ -142,13 +142,14 @@ The optimizer is fully compatible with GraalVM native images and Spring Boot's A
 
 - **Resource hints** are registered via `AutoConfigurationOptimizerRuntimeHints` to include the properties file in native images
 - **Reflection hints** are registered for `OptimizedAutoConfigurationImportFilter` and `TrainingRunApplicationListener`
-- Run the training run **before** `spring-boot:process-aot` to get maximum benefit
+- Run the training run and inject step **before** `spring-boot:process-aot` to get maximum benefit
 
 ```bash
 # Recommended build order for native images:
 mvn autoconfiguration-optimizer:train          # 1. Training run
-mvn spring-boot:process-aot                   # 2. AOT processing
-mvn -Pnative native:compile                   # 3. Native compilation
+mvn autoconfiguration-optimizer:inject         # 2. Inject optimizer core
+mvn spring-boot:process-aot                   # 3. AOT processing
+mvn -Pnative native:compile                   # 4. Native compilation
 ```
 
 ## Configuration Reference
@@ -235,4 +236,4 @@ See [SECURITY.md](SECURITY.md) for how to report security vulnerabilities.
 
 ## License
 
-Apache License 2.0 — see [LICENSE](LICENSE) for details.
+Apache License 2.0 - see [LICENSE](LICENSE) for details.
