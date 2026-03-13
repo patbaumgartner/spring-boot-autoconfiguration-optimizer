@@ -28,6 +28,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 // Reuse the sources from the Maven petclinic sample
@@ -45,6 +46,31 @@ sourceSets {
             srcDirs = ['../petclinic-sample/src/test/java']
         }
     }
+}
+
+// Configure the train task to use the bootJar as input so it can run the fully
+// assembled application during the training run.
+tasks.named('trainAutoconfiguration').configure { task ->
+    task.dependsOn(tasks.named('bootJar'))
+    task.jar.set(tasks.named('bootJar').flatMap { it.archiveFile })
+}
+
+// Ensure the optimizer core is injected into the classes directory before test
+// compilation and execution. Gradle 9 requires explicit task dependencies when a task
+// uses the output of another task (build/classes/java/main is shared between
+// injectOptimizerCore and compileTestJava's compilation classpath).
+tasks.named('compileTestJava').configure { task ->
+    task.dependsOn('injectOptimizerCore')
+}
+
+// Pass the training output path so PetClinicOptimizerIT can locate the file
+// when the trainAutoconfiguration task has already been run.
+tasks.named('test').configure { task ->
+    task.systemProperty('trainingFile',
+            layout.buildDirectory.file('autoconfiguration-optimizer/autoconfiguration-optimizer.properties')
+                    .get().asFile.absolutePath)
+    task.systemProperty('projectBuildOutputDirectory',
+            layout.buildDirectory.dir('classes/java/main').get().asFile.absolutePath)
 }
 
 test {

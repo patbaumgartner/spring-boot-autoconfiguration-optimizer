@@ -226,6 +226,50 @@ spring-boot-autoconfiguration-optimizer/
 └── benchmarks/                                # Startup benchmarks + scripts
 ```
 
+## Running Integration Tests
+
+The integration tests exercise the full **train → inject → verify** cycle against a
+[PetClinic](integration-tests/petclinic-sample)-like application (Web + JPA + Actuator +
+Cache + Validation).
+
+### Maven
+
+```bash
+# 1. Install the plugin to your local Maven repository
+mvn install -DskipTests -q -pl spring-boot-autoconfiguration-optimizer-maven-plugin -am
+
+# 2. Run the full integration test cycle (inject + train + verify)
+mvn verify -f integration-tests/petclinic-sample/pom.xml
+```
+
+`mvn verify` runs the following steps automatically:
+
+| Phase | Goal | What it does |
+|---|---|---|
+| `prepare-package` | `inject` | Embeds optimizer core into `target/classes` |
+| `package` | `repackage` | Creates the executable Spring Boot fat JAR |
+| `pre-integration-test` | `train` | Starts the app, captures loaded auto-configurations, writes `autoconfiguration-optimizer.properties` |
+| `integration-test` | Failsafe | Runs `PetClinicOptimizerIT` — verifies the training file was generated and the core was injected |
+| `verify` | Failsafe verify | Fails the build if any IT test failed |
+
+### Gradle
+
+```bash
+# 1. Install the parent POM and core to your local Maven repository
+mvn install -DskipTests -q -N
+mvn install -DskipTests -q -pl autoconfiguration-optimizer-core
+
+# 2. Publish the Gradle plugin to your local Maven repository
+cd spring-boot-autoconfiguration-optimizer-gradle-plugin
+./gradlew publishToMavenLocal
+
+# 3. Run the full integration test cycle
+cd integration-tests/petclinic-sample-gradle
+./gradlew bootJar                                           # 1. Build initial JAR (inject runs automatically)
+./gradlew trainAutoconfiguration copyAutoconfigurationOptimizerFile  # 2. Train and copy properties file
+./gradlew bootJar test                                      # 3. Rebuild optimized JAR and run tests
+```
+
 ## Contributing
 
 See [CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md) for community standards.
