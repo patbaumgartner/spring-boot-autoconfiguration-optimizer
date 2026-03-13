@@ -121,7 +121,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: integration-test-results-maven-java${{ matrix.java }}
-          path: 'integration-tests/**/target/surefire-reports/*.xml'
+          path: |
+            integration-tests/**/target/surefire-reports/*.xml
+            integration-tests/**/target/failsafe-reports/*.xml
           retention-days: 7
 
       - name: Set up Gradle cache
@@ -135,9 +137,12 @@ jobs:
         working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin
         run: ./gradlew --no-daemon publishToMavenLocal
 
-      - name: Run Gradle Integration Tests (petclinic-sample-gradle bootJar)
+      - name: Run Gradle Integration Tests (full train and inject cycle)
         working-directory: integration-tests/petclinic-sample-gradle
-        run: ./gradlew --no-daemon bootJar
+        run: |
+          ./gradlew --no-daemon bootJar
+          ./gradlew --no-daemon trainAutoconfiguration copyAutoconfigurationOptimizerFile
+          ./gradlew --no-daemon bootJar test
 
       - name: Run Gradle Plugin Tests
         working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin
@@ -148,7 +153,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: integration-test-results-gradle-java${{ matrix.java }}
-          path: 'spring-boot-autoconfiguration-optimizer-gradle-plugin/build/test-results/**/*.xml'
+          path: |
+            spring-boot-autoconfiguration-optimizer-gradle-plugin/build/test-results/**/*.xml
+            integration-tests/petclinic-sample-gradle/build/test-results/**/*.xml
           retention-days: 7
 
   benchmark-smoke-maven:

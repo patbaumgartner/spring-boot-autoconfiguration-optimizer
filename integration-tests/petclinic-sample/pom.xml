@@ -86,8 +86,42 @@
         <version>${project.version}</version>
         <executions>
           <execution>
+            <id>inject</id>
             <goals>
               <goal>inject</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>train</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>train</goal>
+            </goals>
+            <configuration>
+              <jvmArguments>
+                <jvmArgument>-Dserver.port=0</jvmArgument>
+                <jvmArgument>-Dspring.main.banner-mode=off</jvmArgument>
+                <jvmArgument>-Dspring.jpa.show-sql=false</jvmArgument>
+              </jvmArguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>${maven-failsafe-plugin.version}</version>
+        <configuration>
+          <systemPropertyVariables>
+            <trainingFile>${project.build.directory}/autoconfiguration-optimizer.properties</trainingFile>
+            <projectBuildOutputDirectory>${project.build.outputDirectory}</projectBuildOutputDirectory>
+          </systemPropertyVariables>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
             </goals>
           </execution>
         </executions>
