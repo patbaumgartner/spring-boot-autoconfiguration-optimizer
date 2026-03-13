@@ -131,6 +131,14 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Publish Gradle plugin to local Maven repository
+        working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin
+        run: ./gradlew --no-daemon publishToMavenLocal
+
+      - name: Run Gradle Integration Tests (petclinic-sample-gradle bootJar)
+        working-directory: integration-tests/petclinic-sample-gradle
+        run: ./gradlew --no-daemon bootJar
+
       - name: Run Gradle Plugin Tests
         working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin
         run: ./gradlew --no-daemon test
