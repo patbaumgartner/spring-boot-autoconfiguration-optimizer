@@ -47,10 +47,6 @@ sourceSets {
     }
 }
 
-autoconfigurationOptimizer {
-    mainClass = 'com.fortytwotalents.petclinic.PetClinicApplication'
-}
-
 test {
     useJUnitPlatform()
 }
