@@ -8,7 +8,7 @@
 [![Java](https://img.shields.io/badge/Java-17%2B-orange.svg)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
 
-> Reduce Spring Boot startup time by automatically detecting and excluding unused auto-configurations.
+> Reduce Spring Boot startup time by automatically detecting and excluding unused auto-configurations using a one-time training run.
 
 ## Why Bother?
 
@@ -19,13 +19,13 @@ The result: fewer condition evaluations, faster startup, and zero changes to you
 ## How It Works
 
 1. **Inject** — Add the plugin to your build. The `inject` goal/task automatically embeds the optimizer core into your packaged JAR. No separate dependency declaration is needed.
-2. **Optional: Training Run** — Start your application once with training mode enabled. The optimizer captures every auto-configuration that passed its conditions and writes the list to `META-INF/autoconfiguration-optimizer.properties`. Commit this file so it is baked into subsequent builds.
+2. **Training Run** — Start your application once with training mode enabled. The optimizer captures every auto-configuration that passed its conditions and writes the list to `META-INF/autoconfiguration-optimizer.properties`. Commit this file so it is baked into subsequent builds. **This step is required to get any optimization benefit** — without the training file, the optimizer is a no-op.
 3. **Subsequent Starts** — An `AutoConfigurationImportFilter` reads the file at startup and directly restricts which auto-configurations Spring Boot imports to only those in the training set.
-4. **Safe by Default** — If the training file is missing, the optimizer does nothing and Spring Boot starts as usual.
+4. **Safe by Default** — If the training file is missing (e.g., before the first training run), the optimizer does nothing and Spring Boot starts as usual.
 
 ```
-Training Run (optional)         Production Run
-───────────────────────         ──────────────────────────────────
+Training Run                    Production Run
+────────────────                ──────────────────────────────────
 App starts normally             AutoConfigurationImportFilter reads
 with all auto-configs           META-INF/autoconfiguration-
                                 optimizer.properties
@@ -60,7 +60,7 @@ The actual improvement depends on how many Spring Boot starters your application
 
 ### Maven
 
-Add the plugin to your `pom.xml`. The `inject` goal embeds the optimizer core into your packaged JAR — no explicit core dependency needed:
+Add the plugin to your `pom.xml`. The `inject` goal embeds the optimizer core into your packaged JAR — no explicit core dependency needed. Then run the `train` goal once to generate the optimizer properties file:
 
 ```xml
 <plugin>
@@ -69,15 +69,30 @@ Add the plugin to your `pom.xml`. The `inject` goal embeds the optimizer core in
     <version>1.0.0</version>
     <executions>
         <execution>
-            <goals><goal>inject</goal></goals>
+            <goals>
+                <goal>train</goal>
+                <goal>inject</goal>
+            </goals>
         </execution>
     </executions>
+    <configuration>
+        <!-- Auto-detected from @SpringBootApplication or start-class property.
+             Set explicitly if auto-detection fails. -->
+        <mainClass>com.example.MyApplication</mainClass>
+
+        <!-- Optional: extra JVM arguments passed to the training-run process -->
+        <jvmArguments>
+            <jvmArgument>-Xmx512m</jvmArgument>
+            <jvmArgument>-Dspring.profiles.active=training</jvmArgument>
+        </jvmArguments>
+
+        <!-- Optional: timeout in seconds (default: 120) -->
+        <timeout>120</timeout>
+    </configuration>
 </plugin>
 ```
 
-That's it! `mvn package` will now produce an optimized-ready JAR.
-
-**Optional: run the training step** to generate the optimizer properties file and commit it:
+Or run the training goal directly on the command line:
 
 ```bash
 mvn com.fortytwotalents:spring-boot-autoconfiguration-optimizer-maven-plugin:train
@@ -86,12 +101,7 @@ mvn com.fortytwotalents:spring-boot-autoconfiguration-optimizer-maven-plugin:tra
 # Commit this file to your repository!
 ```
 
-The main class is auto-detected from `@SpringBootApplication` or the `start-class` property. You can also specify it explicitly:
-
-```bash
-mvn com.fortytwotalents:spring-boot-autoconfiguration-optimizer-maven-plugin:train \
-  -Dautoconfiguration.optimizer.mainClass=com.example.MyApplication
-```
+Re-run training whenever your application's dependencies change significantly.
 
 ### Gradle
 
@@ -101,20 +111,12 @@ Apply the plugin — the optimizer core is automatically injected into your `boo
 plugins {
     id 'com.fortytwotalents.autoconfiguration-optimizer' version '1.0.0'
 }
-```
 
-That's it! `./gradlew bootJar` will now produce an optimized-ready JAR. The main class is auto-detected from `@SpringBootApplication`.
-
-**Optional: run the training step** to generate the optimizer properties file and commit it:
-
-```bash
-./gradlew trainAutoconfiguration copyAutoconfigurationOptimizerFile
-```
-
-You can add optional configuration when needed:
-
-```groovy
 autoconfigurationOptimizer {
+    // Auto-detected from @SpringBootApplication.
+    // Set explicitly if auto-detection fails.
+    mainClass = 'com.example.MyApplication'
+
     // Optional: extra JVM arguments passed to the training-run process
     jvmArguments = ['-Xmx512m', '-Dspring.profiles.active=training']
 
@@ -122,6 +124,17 @@ autoconfigurationOptimizer {
     timeout = 120
 }
 ```
+
+Run the training step and copy the generated file into your resources:
+
+```bash
+./gradlew trainAutoconfiguration copyAutoconfigurationOptimizerFile
+
+# Generates src/main/resources/META-INF/autoconfiguration-optimizer.properties
+# Commit this file to your repository!
+```
+
+Re-run training whenever your application's dependencies change significantly.
 
 ## GraalVM Native Image & AOT Support
 
@@ -133,7 +146,7 @@ The optimizer is fully compatible with GraalVM native images and Spring Boot's A
 
 ```bash
 # Recommended build order for native images:
-mvn autoconfiguration-optimizer:train          # 1. Training run (optional but recommended)
+mvn autoconfiguration-optimizer:train          # 1. Training run
 mvn spring-boot:process-aot                   # 2. AOT processing
 mvn -Pnative native:compile                   # 3. Native compilation
 ```
