@@ -161,8 +161,7 @@ class CoreInjectorTest {
 		Path outputDir = tempDir.resolve("classes-slip");
 		Files.createDirectories(outputDir);
 
-		Assertions
-			.assertThatThrownBy(() -> CoreInjector.injectCoreJarContents(maliciousJar, outputDir))
+		Assertions.assertThatThrownBy(() -> CoreInjector.injectCoreJarContents(maliciousJar, outputDir))
 			.isInstanceOf(IOException.class)
 			.hasMessageContaining("Zip Slip");
 

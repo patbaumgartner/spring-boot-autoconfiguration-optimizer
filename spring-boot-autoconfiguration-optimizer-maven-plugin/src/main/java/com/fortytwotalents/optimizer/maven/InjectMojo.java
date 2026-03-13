@@ -16,12 +16,12 @@ import java.nio.file.Path;
  *
  * <p>
  * This goal should be configured to run in the {@code prepare-package} phase so that the
- * optimizer core classes are present in the build output whenever the project is packaged.
- * The core is injected unconditionally so that the resulting JAR is always capable of
- * performing a training run (even when no training file exists yet). When no training file
- * is present at runtime the {@code OptimizedAutoConfigurationImportFilter} simply passes
- * all auto-configurations through, so there is no behavioral change for unoptimized
- * applications.
+ * optimizer core classes are present in the build output whenever the project is
+ * packaged. The core is injected unconditionally so that the resulting JAR is always
+ * capable of performing a training run (even when no training file exists yet). When no
+ * training file is present at runtime the {@code OptimizedAutoConfigurationImportFilter}
+ * simply passes all auto-configurations through, so there is no behavioral change for
+ * unoptimized applications.
  *
  * <p>
  * Together with the {@code train} goal, this eliminates the need to declare

@@ -71,7 +71,7 @@ class MainClassFinderTest {
 		Path classDir = tempDir.resolve("classes");
 		Files.createDirectories(classDir.resolve("com/example"));
 		Files.write(classDir.resolve("com/example/Other.class"),
-				new byte[]{(byte) 0xCA, (byte) 0xFE, (byte) 0xBA, (byte) 0xBE});
+				new byte[] { (byte) 0xCA, (byte) 0xFE, (byte) 0xBA, (byte) 0xBE });
 
 		Optional<String> result = MainClassFinder.findMainClass(classDir);
 
@@ -103,8 +103,8 @@ class MainClassFinderTest {
 		Files.createDirectories(classFile.getParent());
 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		baos.write(new byte[]{(byte) 0xCA, (byte) 0xFE, (byte) 0xBA, (byte) 0xBE});
-		baos.write(new byte[]{0, 0, 0, 61});
+		baos.write(new byte[] { (byte) 0xCA, (byte) 0xFE, (byte) 0xBA, (byte) 0xBE });
+		baos.write(new byte[] { 0, 0, 0, 61 });
 		baos.write(annotationDescriptor.getBytes(StandardCharsets.UTF_8));
 
 		Files.write(classFile, baos.toByteArray());
