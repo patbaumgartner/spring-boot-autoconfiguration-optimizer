@@ -2,7 +2,7 @@
 # ============================================================
 # Spring Boot Autoconfiguration Optimizer - Benchmark Runner
 # ============================================================
-# Usage: ./benchmarks/scripts/run-benchmarks.sh [petclinic-jar-path]
+# Usage: ./benchmarks/scripts/run-benchmarks-maven.sh [petclinic-jar-path]
 #
 # This script:
 # 1. Runs the PetClinic app in training mode to generate optimizer data
@@ -69,8 +69,8 @@ echo "Training complete. Optimizer properties generated."
 
 # Extract training stats from the properties file header
 TRAINING_AVAILABLE=$(grep -oP '(?<=# Total available auto-configurations: )\d+' "${OPTIMIZER_PROPS}" || echo "")
-TRAINING_LOADED=$(grep -oP '(?<=# Total auto-configurations loaded: )\d+' "${OPTIMIZER_PROPS}" || echo "")
-TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations excluded: )\d+' "${OPTIMIZER_PROPS}" || echo "")
+TRAINING_LOADED=$(grep -oP '(?<=# Auto-configurations loaded during training: )\d+' "${OPTIMIZER_PROPS}" || echo "")
+TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations to skip at startup: )\d+' "${OPTIMIZER_PROPS}" || echo "")
 
 if [ -n "${TRAINING_AVAILABLE}" ]; then
     echo "  Available auto-configurations: ${TRAINING_AVAILABLE}"
@@ -214,7 +214,7 @@ $(for i in "${!OPTIMIZED_TIMES[@]}"; do echo "- Run $((i+1)): ${OPTIMIZED_TIMES[
 mvn package -DskipTests
 
 # Run benchmarks
-./benchmarks/scripts/run-benchmarks.sh integration-tests/petclinic-sample/target/*.jar
+./benchmarks/scripts/run-benchmarks-maven.sh integration-tests/petclinic-sample/target/*.jar
 \`\`\`
 
 ## Environment Details

@@ -38,7 +38,9 @@ import java.util.concurrent.TimeUnit;
  * configure the {@code inject} goal to run during the {@code prepare-package} phase.
  *
  * <p>
- * Usage in {@code pom.xml}: <pre>{@code
+ * Usage in {@code pom.xml}:
+ *
+ * <pre>{@code
  * <plugin>
  *     <groupId>com.fortytwotalents</groupId>
  *     <artifactId>spring-boot-autoconfiguration-optimizer-maven-plugin</artifactId>
@@ -55,11 +57,13 @@ import java.util.concurrent.TimeUnit;
  * }</pre>
  *
  * <p>
- * Or run from the command line: <pre>{@code
+ * Or run from the command line:
+ *
+ * <pre>{@code
  * mvn com.fortytwotalents:spring-boot-autoconfiguration-optimizer-maven-plugin:train
  * }</pre>
  */
-@Mojo(name = "train", defaultPhase = LifecyclePhase.INTEGRATION_TEST,
+@Mojo(name = "train", defaultPhase = LifecyclePhase.PROCESS_CLASSES,
 		requiresDependencyResolution = ResolutionScope.TEST, requiresProject = true, threadSafe = true)
 public class TrainMojo extends AbstractMojo {
 
@@ -90,10 +94,10 @@ public class TrainMojo extends AbstractMojo {
 
 	/**
 	 * The directory where the generated properties file will be copied. Defaults to
-	 * {@code src/main/resources/META-INF/}.
+	 * {@code target/classes/META-INF/}.
 	 */
 	@Parameter(property = "autoconfiguration.optimizer.targetDirectory",
-			defaultValue = "${project.basedir}/src/main/resources/META-INF")
+			defaultValue = "${project.build.outputDirectory}/META-INF")
 	private File targetDirectory;
 
 	/**

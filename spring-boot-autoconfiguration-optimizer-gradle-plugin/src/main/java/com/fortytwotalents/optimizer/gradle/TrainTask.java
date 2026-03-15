@@ -31,12 +31,22 @@ import java.util.stream.Collectors;
 /**
  * Gradle task that runs a Spring Boot application in training mode to detect
  * which auto-configurations are loaded.
+ *
+ * @see AutoConfigurationOptimizerPlugin
  */
 @DisableCachingByDefault(because = "Runs an external Spring Boot process whose output depends on the environment")
 public abstract class TrainTask extends DefaultTask {
 
     /**
+     * Creates a new {@code TrainTask}.
+     */
+    public TrainTask() {
+    }
+
+    /**
      * The main class of the Spring Boot application.
+     *
+     * @return the main class property
      */
     @Input
     @Optional
@@ -44,6 +54,8 @@ public abstract class TrainTask extends DefaultTask {
 
     /**
      * The Spring Boot executable JAR to run.
+     *
+     * @return the JAR file property
      */
     @InputFile
     @PathSensitive(PathSensitivity.NONE)
@@ -52,14 +64,19 @@ public abstract class TrainTask extends DefaultTask {
 
     /**
      * The classpath for running the application.
+     *
+     * @return the runtime classpath list property
      */
     @Classpath
     @Optional
     public abstract ListProperty<File> getRuntimeClasspath();
 
     /**
-     * The directories containing compiled class files to scan for the main class when
+     * The directories containing compiled class files to scan for the main class
+     * when
      * neither {@code jar} nor {@code mainClass} is configured.
+     *
+     * @return the classes directories file collection
      */
     @InputFiles
     @Classpath
@@ -68,6 +85,8 @@ public abstract class TrainTask extends DefaultTask {
 
     /**
      * Additional JVM arguments for the training run.
+     *
+     * @return the JVM arguments list property
      */
     @Input
     @Optional
@@ -75,22 +94,34 @@ public abstract class TrainTask extends DefaultTask {
 
     /**
      * The training run timeout in seconds.
+     *
+     * @return the timeout property
      */
     @Input
     public abstract Property<Integer> getTimeoutSeconds();
 
     /**
      * The output directory for the generated properties file.
+     *
+     * @return the output directory property
      */
     @OutputDirectory
     public abstract DirectoryProperty getOutputDirectory();
 
     /**
      * The name of the generated properties file.
+     *
+     * @return the output file name property
      */
     @Input
     public abstract Property<String> getOutputFile();
 
+    /**
+     * Executes the training run.
+     *
+     * @throws IOException          if an I/O error occurs during process execution
+     * @throws InterruptedException if the training process is interrupted
+     */
     @TaskAction
     public void train() throws IOException, InterruptedException {
         String outputFileName = getOutputFile().get();
@@ -154,8 +185,7 @@ public abstract class TrainTask extends DefaultTask {
                     getLogger().lifecycle(
                             "Spring Boot Autoconfiguration Optimizer: Core classes injected into: {}", dir);
                     injected = true;
-                }
-                catch (java.io.IOException ex) {
+                } catch (java.io.IOException ex) {
                     throw new GradleException("Failed to inject optimizer core classes into " + dir, ex);
                 }
             }
@@ -219,8 +249,10 @@ public abstract class TrainTask extends DefaultTask {
     }
 
     /**
-     * Builds the classpath for the training subprocess. Always includes the optimizer
-     * core JAR so training works without the user declaring it as a project dependency.
+     * Builds the classpath for the training subprocess. Always includes the
+     * optimizer
+     * core JAR so training works without the user declaring it as a project
+     * dependency.
      */
     private String buildClasspath() {
         List<String> entries = new ArrayList<>();

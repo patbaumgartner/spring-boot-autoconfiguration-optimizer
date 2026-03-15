@@ -20,7 +20,9 @@ import java.nio.file.Path;
  * and is committed to source control.
  *
  * <p>
- * Usage: <pre>{@code
+ * Usage:
+ *
+ * <pre>{@code
  * mvn com.fortytwotalents:spring-boot-autoconfiguration-optimizer-maven-plugin:verify
  * }</pre>
  */
@@ -37,7 +39,7 @@ public class VerifyMojo extends AbstractMojo {
 	 * The expected location of the training properties file.
 	 */
 	@Parameter(property = "autoconfiguration.optimizer.trainingFile",
-			defaultValue = "${project.basedir}/src/main/resources/META-INF/autoconfiguration-optimizer.properties")
+			defaultValue = "${project.build.outputDirectory}/META-INF/autoconfiguration-optimizer.properties")
 	private File trainingFile;
 
 	/**

@@ -12,15 +12,19 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 /**
- * Gradle task that injects the {@code autoconfiguration-optimizer-core} classes and
- * META-INF resources into the project's main output directory before the {@code jar}
+ * Gradle task that injects the {@code autoconfiguration-optimizer-core} classes
+ * and
+ * META-INF resources into the project's main output directory before the
+ * {@code jar}
  * task runs.
  *
  * <p>
  * This task is automatically wired to run before the {@code jar} task when the
  * {@link AutoConfigurationOptimizerPlugin} is applied. The core is injected
- * unconditionally so that the resulting JAR is always capable of performing a training
- * run (even when no training file exists yet). When no training file is present at
+ * unconditionally so that the resulting JAR is always capable of performing a
+ * training
+ * run (even when no training file exists yet). When no training file is present
+ * at
  * runtime the {@code OptimizedAutoConfigurationImportFilter} simply passes all
  * auto-configurations through, so there is no behavioral change for unoptimized
  * applications.
@@ -33,12 +37,24 @@ import java.nio.file.Path;
 public abstract class InjectTask extends DefaultTask {
 
 	/**
-	 * The directory into which the core classes and resources are injected (typically the
+	 * Creates a new {@code InjectTask}.
+	 */
+	public InjectTask() {
+	}
+
+	/**
+	 * The directory into which the core classes and resources are injected
+	 * (typically the
 	 * main classes output directory, e.g. {@code build/classes/java/main}).
+	 *
+	 * @return the output directory property
 	 */
 	@OutputDirectory
 	public abstract DirectoryProperty getOutputDirectory();
 
+	/**
+	 * Injects the optimizer core classes and resources into the output directory.
+	 */
 	@TaskAction
 	public void inject() {
 		Path coreJar = CoreInjector.findCoreJar();
@@ -53,8 +69,7 @@ public abstract class InjectTask extends DefaultTask {
 			CoreInjector.injectCoreJarContents(coreJar, outputDir.toPath());
 			getLogger().lifecycle(
 					"Spring Boot Autoconfiguration Optimizer: Core classes injected into: {}", outputDir);
-		}
-		catch (IOException ex) {
+		} catch (IOException ex) {
 			throw new GradleException("Failed to inject optimizer core classes into build output", ex);
 		}
 	}
