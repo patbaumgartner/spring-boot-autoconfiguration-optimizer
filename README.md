@@ -97,8 +97,7 @@ Or run the training goal directly on the command line:
 ```bash
 mvn com.fortytwotalents:spring-boot-autoconfiguration-optimizer-maven-plugin:train
 
-# Generates src/main/resources/META-INF/autoconfiguration-optimizer.properties
-# Commit this file to your repository!
+# Generates target/classes/META-INF/autoconfiguration-optimizer.properties
 ```
 
 Re-run training whenever your application's dependencies change significantly.
@@ -125,13 +124,13 @@ autoconfigurationOptimizer {
 }
 ```
 
-Run the training step and copy the generated file into your resources:
+Run the training step (automatically wired into `jar`/`bootJar`):
 
 ```bash
-./gradlew trainAutoconfiguration copyAutoconfigurationOptimizerFile
+./gradlew bootJar
 
-# Generates src/main/resources/META-INF/autoconfiguration-optimizer.properties
-# Commit this file to your repository!
+# Training, copy, and inject tasks run automatically before packaging
+# Generates build/classes/java/main/META-INF/autoconfiguration-optimizer.properties
 ```
 
 Re-run training whenever your application's dependencies change significantly.
@@ -172,7 +171,7 @@ mvn -Pnative native:compile                   # 4. Native compilation
 | `jvmArguments` | `autoconfiguration.optimizer.jvmArguments` | _(none)_ | Additional JVM arguments passed to the training-run process. |
 | `jar` | `autoconfiguration.optimizer.jar` | _(none)_ | Spring Boot executable JAR to run. When set, `mainClass` is ignored. |
 | `timeout` | `autoconfiguration.optimizer.timeout` | `120` | Training run timeout in seconds. |
-| `targetDirectory` | `autoconfiguration.optimizer.targetDirectory` | `src/main/resources/META-INF` | Directory where the properties file is copied after training. |
+| `targetDirectory` | `autoconfiguration.optimizer.targetDirectory` | `${project.build.outputDirectory}/META-INF` | Directory where the properties file is copied after training. |
 | `outputFile` | `autoconfiguration.optimizer.outputFile` | `autoconfiguration-optimizer.properties` | Name of the generated properties file. |
 | `workingDirectory` | `autoconfiguration.optimizer.workingDirectory` | `${project.build.directory}` | Working directory for the training process. |
 | `skip` | `autoconfiguration.optimizer.skip` | `false` | Skip the training run. |
@@ -185,7 +184,7 @@ mvn -Pnative native:compile                   # 4. Native compilation
 | `jvmArguments` | _(none)_ | Additional JVM arguments passed to the training-run process. |
 | `jar` | _(none)_ | Spring Boot executable JAR to run. When set, `mainClass` is ignored. |
 | `timeout` | `120` | Training run timeout in seconds. |
-| `targetDirectory` | `src/main/resources/META-INF` | Directory where the properties file is copied after training. |
+| `targetDirectory` | `build/classes/java/main/META-INF` | Directory where the properties file is copied after training. |
 | `outputFile` | `autoconfiguration-optimizer.properties` | Name of the generated properties file. |
 | `skip` | `false` | Skip the training run. |
 
@@ -204,7 +203,7 @@ mvn -Pnative native:compile                   # 4. Native compilation
 mvn package -DskipTests
 
 # Run benchmarks
-./benchmarks/scripts/run-benchmarks.sh \
+./benchmarks/scripts/run-benchmarks-maven.sh \
   integration-tests/petclinic-sample/target/autoconfiguration-optimizer-petclinic-sample-*.jar
 
 # View the report

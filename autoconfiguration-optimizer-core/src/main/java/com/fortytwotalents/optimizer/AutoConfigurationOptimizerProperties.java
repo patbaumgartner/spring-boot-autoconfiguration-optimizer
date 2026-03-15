@@ -27,9 +27,9 @@ public class AutoConfigurationOptimizerProperties {
 
 	/**
 	 * Whether this is a training run. During a training run, all auto-configurations are
-	 * loaded and the ones that are active are recorded to a file. Use
-	 * {@code TRAINING_RUN_JAVA_TOOL_OPTIONS} to set this during build. Default:
-	 * {@code false}
+	 * loaded and the ones that are active are recorded to a file. The build plugin sets
+	 * this automatically via {@code -Dautoconfiguration.optimizer.training-run=true}.
+	 * Default: {@code false}
 	 */
 	private boolean trainingRun;
 

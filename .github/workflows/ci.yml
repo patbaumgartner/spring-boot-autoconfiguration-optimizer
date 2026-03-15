@@ -211,9 +211,9 @@ jobs:
 
       - name: Package optimized fat JAR
         run: |
-          mkdir -p integration-tests/petclinic-sample/src/main/resources/META-INF
+          mkdir -p integration-tests/petclinic-sample/target/classes/META-INF
           cp /tmp/benchmark-training/autoconfiguration-optimizer.properties \
-             integration-tests/petclinic-sample/src/main/resources/META-INF/
+             integration-tests/petclinic-sample/target/classes/META-INF/
           mvn --batch-mode --no-transfer-progress package -DskipTests \
             -f integration-tests/petclinic-sample/pom.xml
 
@@ -391,9 +391,9 @@ jobs:
 
       - name: Package optimized fat JAR
         run: |
-          mkdir -p integration-tests/petclinic-sample/src/main/resources/META-INF
+          mkdir -p integration-tests/petclinic-sample-gradle/build/classes/java/main/META-INF
           cp /tmp/benchmark-training-gradle/autoconfiguration-optimizer.properties \
-             integration-tests/petclinic-sample/src/main/resources/META-INF/
+             integration-tests/petclinic-sample-gradle/build/classes/java/main/META-INF/
           cd integration-tests/petclinic-sample-gradle && ./gradlew --no-daemon bootJar
 
       - name: Measure baseline startup time

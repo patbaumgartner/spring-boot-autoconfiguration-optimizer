@@ -67,19 +67,19 @@ jobs:
 
           # Export stats to the environment for later steps
           TRAINING_AVAILABLE=$(grep -oP '(?<=# Total available auto-configurations: )\d+' benchmarks/results/training/autoconfiguration-optimizer.properties || echo "")
-          TRAINING_LOADED=$(grep -oP '(?<=# Total auto-configurations loaded: )\d+' benchmarks/results/training/autoconfiguration-optimizer.properties || echo "")
-          TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations excluded: )\d+' benchmarks/results/training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_LOADED=$(grep -oP '(?<=# Auto-configurations loaded during training: )\d+' benchmarks/results/training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations to skip at startup: )\d+' benchmarks/results/training/autoconfiguration-optimizer.properties || echo "")
           echo "training_available=${TRAINING_AVAILABLE}" >> $GITHUB_OUTPUT
           echo "training_loaded=${TRAINING_LOADED}" >> $GITHUB_OUTPUT
           echo "training_excluded=${TRAINING_EXCLUDED}" >> $GITHUB_OUTPUT
 
       - name: Package optimized fat JAR
         run: |
-          # Copy the generated training properties into the application resources
+          # Copy the generated training properties into the build output
           # so it gets baked into the fat JAR - this is the real-world usage pattern
-          mkdir -p integration-tests/petclinic-sample/src/main/resources/META-INF
+          mkdir -p integration-tests/petclinic-sample/target/classes/META-INF
           cp benchmarks/results/training/autoconfiguration-optimizer.properties \
-             integration-tests/petclinic-sample/src/main/resources/META-INF/
+             integration-tests/petclinic-sample/target/classes/META-INF/
 
           # Rebuild only the petclinic module to produce the optimized fat JAR
           mvn --batch-mode --no-transfer-progress package -DskipTests \
@@ -329,19 +329,19 @@ jobs:
 
           # Export stats to the environment for later steps
           TRAINING_AVAILABLE=$(grep -oP '(?<=# Total available auto-configurations: )\d+' benchmarks/results-gradle/training/autoconfiguration-optimizer.properties || echo "")
-          TRAINING_LOADED=$(grep -oP '(?<=# Total auto-configurations loaded: )\d+' benchmarks/results-gradle/training/autoconfiguration-optimizer.properties || echo "")
-          TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations excluded: )\d+' benchmarks/results-gradle/training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_LOADED=$(grep -oP '(?<=# Auto-configurations loaded during training: )\d+' benchmarks/results-gradle/training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations to skip at startup: )\d+' benchmarks/results-gradle/training/autoconfiguration-optimizer.properties || echo "")
           echo "training_available=${TRAINING_AVAILABLE}" >> $GITHUB_OUTPUT
           echo "training_loaded=${TRAINING_LOADED}" >> $GITHUB_OUTPUT
           echo "training_excluded=${TRAINING_EXCLUDED}" >> $GITHUB_OUTPUT
 
       - name: Package optimized fat JAR
         run: |
-          # Copy the generated training properties into the application resources
+          # Copy the generated training properties into the build output
           # so it gets baked into the fat JAR - this is the real-world usage pattern
-          mkdir -p integration-tests/petclinic-sample/src/main/resources/META-INF
+          mkdir -p integration-tests/petclinic-sample-gradle/build/classes/java/main/META-INF
           cp benchmarks/results-gradle/training/autoconfiguration-optimizer.properties \
-             integration-tests/petclinic-sample/src/main/resources/META-INF/
+             integration-tests/petclinic-sample-gradle/build/classes/java/main/META-INF/
 
           # Rebuild only the petclinic-gradle module to produce the optimized fat JAR
           cd integration-tests/petclinic-sample-gradle && ./gradlew --no-daemon bootJar

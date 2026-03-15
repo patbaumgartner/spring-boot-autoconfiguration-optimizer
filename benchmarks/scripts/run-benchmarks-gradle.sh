@@ -69,8 +69,8 @@ echo "Training complete. Optimizer properties generated."
 
 # Extract training stats from the properties file header
 TRAINING_AVAILABLE=$(grep -oP '(?<=# Total available auto-configurations: )\d+' "${OPTIMIZER_PROPS}" || echo "")
-TRAINING_LOADED=$(grep -oP '(?<=# Total auto-configurations loaded: )\d+' "${OPTIMIZER_PROPS}" || echo "")
-TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations excluded: )\d+' "${OPTIMIZER_PROPS}" || echo "")
+TRAINING_LOADED=$(grep -oP '(?<=# Auto-configurations loaded during training: )\d+' "${OPTIMIZER_PROPS}" || echo "")
+TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations to skip at startup: )\d+' "${OPTIMIZER_PROPS}" || echo "")
 
 if [ -n "${TRAINING_AVAILABLE}" ]; then
     echo "  Available auto-configurations: ${TRAINING_AVAILABLE}"
