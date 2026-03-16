@@ -125,6 +125,16 @@ public abstract class TrainTask extends DefaultTask {
     @TaskAction
     public void train() throws IOException, InterruptedException {
         String outputFileName = getOutputFile().get();
+
+        // Validate the output file name to prevent path traversal: it must be a simple
+        // filename with no directory components.
+        Path outputFileNamePath = Paths.get(outputFileName);
+        if (outputFileNamePath.isAbsolute() || outputFileNamePath.getNameCount() != 1) {
+            throw new GradleException(
+                    "Output file name must be a simple filename without directory components: " + outputFileName);
+        }
+        outputFileName = outputFileNamePath.getFileName().toString();
+
         Path workDir = getOutputDirectory().get().getAsFile().toPath();
         Files.createDirectories(workDir);
         Path outputFilePath = workDir.resolve(outputFileName);
