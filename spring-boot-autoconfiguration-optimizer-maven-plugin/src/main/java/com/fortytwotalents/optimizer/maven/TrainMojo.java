@@ -136,7 +136,15 @@ public class TrainMojo extends AbstractMojo {
 
 		getLog().info("Spring Boot Autoconfiguration Optimizer: Starting training run...");
 
-		Path outputFilePath = workingDirectory.toPath().resolve(outputFile);
+		// Validate the output file name to prevent path traversal: it must be a simple
+		// filename with no directory components.
+		Path outputFileNamePath = Path.of(outputFile);
+		if (outputFileNamePath.isAbsolute() || outputFileNamePath.getNameCount() != 1) {
+			throw new MojoExecutionException(
+					"Output file name must be a simple filename without directory components: " + outputFile);
+		}
+
+		Path outputFilePath = workingDirectory.toPath().resolve(outputFileNamePath.getFileName());
 		// Delete any existing training file to ensure a fresh run
 		try {
 			Files.deleteIfExists(outputFilePath);
