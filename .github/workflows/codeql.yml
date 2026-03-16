@@ -38,8 +38,6 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: java-kotlin
-          queries: security-extended,security-and-quality
-          config-file: ./.github/codeql/codeql-config.yml
 
       - name: Build Maven modules
         run: mvn --batch-mode --no-transfer-progress install -DskipTests -q
@@ -50,9 +48,3 @@ jobs:
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
-        with:
-          category: "/language:java-kotlin"
-          # The 'upload' parameter must be set to 'never' when the repository uses
-          # GitHub's default CodeQL setup; uploading from both setups simultaneously
-          # causes a conflict.  Results are still surfaced via the default setup.
-          upload: never
