@@ -133,7 +133,6 @@ public abstract class TrainTask extends DefaultTask {
             throw new GradleException(
                     "Output file name must be a simple filename without directory components: " + outputFileName);
         }
-        outputFileName = outputFileNamePath.getFileName().toString();
 
         Path workDir = getOutputDirectory().get().getAsFile().toPath();
         Files.createDirectories(workDir);

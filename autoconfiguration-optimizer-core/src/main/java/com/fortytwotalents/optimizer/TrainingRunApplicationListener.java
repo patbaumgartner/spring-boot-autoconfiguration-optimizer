@@ -161,11 +161,10 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 
 		// Validate the output file name to prevent path traversal: it must be a simple
 		// filename with no directory components.
-		String outputFileName = properties.getOutputFile();
-		Path outputFileNamePath = Path.of(outputFileName);
+		Path outputFileNamePath = Path.of(properties.getOutputFile());
 		if (outputFileNamePath.isAbsolute() || outputFileNamePath.getNameCount() != 1) {
 			throw new IllegalArgumentException(
-					"Output file name must be a simple filename without directory components: " + outputFileName);
+					"Output file name must be a simple filename without directory components: " + outputFileNamePath);
 		}
 
 		Path outputFile = outputDir.resolve(outputFileNamePath.getFileName());
