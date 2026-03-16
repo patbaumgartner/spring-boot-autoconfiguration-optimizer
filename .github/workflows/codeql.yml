@@ -51,4 +51,7 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:java-kotlin"
-          upload: always
+          # The 'upload' parameter must be set to 'never' when the repository uses
+          # GitHub's default CodeQL setup; uploading from both setups simultaneously
+          # causes a conflict.  Results are still surfaced via the default setup.
+          upload: never
