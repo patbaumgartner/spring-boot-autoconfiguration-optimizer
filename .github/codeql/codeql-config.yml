@@ -1,0 +1,13 @@
+name: "Java/Kotlin CodeQL configuration"
+
+# Restrict analysis to Java/Kotlin source files only.
+# This prevents CodeQL from attempting to analyze JavaScript or TypeScript,
+# which is not present in this project, and avoids the
+# "No JavaScript/TypeScript code found" error.
+paths-ignore:
+  - "**/*.js"
+  - "**/*.ts"
+  - "**/*.jsx"
+  - "**/*.tsx"
+  - "**/*.mjs"
+  - "**/*.cjs"
