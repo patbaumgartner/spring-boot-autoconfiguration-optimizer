@@ -9,7 +9,7 @@ on:
       iterations:
         description: 'Number of benchmark iterations'
         required: false
-        default: '5'
+        default: '42'
 
 permissions:
   contents: write
@@ -90,7 +90,7 @@ jobs:
         run: |
           TOTAL=0
           COUNT=0
-          for i in $(seq 1 ${{ github.event.inputs.iterations || '5' }}); do
+          for i in $(seq 1 ${{ github.event.inputs.iterations || '42' }}); do
             TMPFILE=$(mktemp)
             java \
               -Dautoconfiguration.optimizer.enabled=false \
@@ -143,7 +143,7 @@ jobs:
         run: |
           TOTAL=0
           COUNT=0
-          for i in $(seq 1 ${{ github.event.inputs.iterations || '5' }}); do
+          for i in $(seq 1 ${{ github.event.inputs.iterations || '42' }}); do
             TMPFILE=$(mktemp)
             java \
               -jar integration-tests/petclinic-sample/target/autoconfiguration-optimizer-petclinic-sample-*.jar \
@@ -214,7 +214,7 @@ jobs:
 
           **Generated:** ${TIMESTAMP}
           **Java Version:** ${JAVA_VERSION}
-          **Iterations:** ${{ github.event.inputs.iterations || '5' }}
+          **Iterations:** ${{ github.event.inputs.iterations || '42' }}
           **Target Application:** Spring PetClinic Sample (Web + JPA + Actuator + Cache + Validation)
           **CI Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
@@ -351,7 +351,7 @@ jobs:
         run: |
           TOTAL=0
           COUNT=0
-          for i in $(seq 1 ${{ github.event.inputs.iterations || '5' }}); do
+          for i in $(seq 1 ${{ github.event.inputs.iterations || '42' }}); do
             TMPFILE=$(mktemp)
             java \
               -Dautoconfiguration.optimizer.enabled=false \
@@ -404,7 +404,7 @@ jobs:
         run: |
           TOTAL=0
           COUNT=0
-          for i in $(seq 1 ${{ github.event.inputs.iterations || '5' }}); do
+          for i in $(seq 1 ${{ github.event.inputs.iterations || '42' }}); do
             TMPFILE=$(mktemp)
             java \
               -jar integration-tests/petclinic-sample-gradle/build/libs/*.jar \
@@ -476,7 +476,7 @@ jobs:
           **Generated:** ${TIMESTAMP}
           **Java Version:** ${JAVA_VERSION}
           **Build Tool:** Gradle
-          **Iterations:** ${{ github.event.inputs.iterations || '5' }}
+          **Iterations:** ${{ github.event.inputs.iterations || '42' }}
           **Target Application:** Spring PetClinic Sample (Web + JPA + Actuator + Cache + Validation)
           **CI Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
