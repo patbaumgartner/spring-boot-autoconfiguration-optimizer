@@ -18,7 +18,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 RESULTS_DIR="${PROJECT_ROOT}/benchmarks/results-gradle"
 REPORT_FILE="${RESULTS_DIR}/benchmark-report.md"
 PETCLINIC_JAR="${1:-${PROJECT_ROOT}/integration-tests/petclinic-sample-gradle/build/libs/*.jar}"
-ITERATIONS="${BENCHMARK_ITERATIONS:-5}"
+ITERATIONS="${BENCHMARK_ITERATIONS:-42}"
 
 mkdir -p "${RESULTS_DIR}"
 
