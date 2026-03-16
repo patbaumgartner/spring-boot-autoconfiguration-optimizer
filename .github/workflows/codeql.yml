@@ -39,6 +39,7 @@ jobs:
         with:
           languages: java-kotlin
           queries: security-extended,security-and-quality
+          config-file: ./.github/codeql/codeql-config.yml
 
       - name: Build Maven modules
         run: mvn --batch-mode --no-transfer-progress install -DskipTests -q
