@@ -58,24 +58,6 @@ class OptimizedAutoConfigurationImportFilterTest {
 	}
 
 	@Test
-	void match_returnsAllTrueWhenAotProcessingActive() {
-		OptimizedAutoConfigurationImportFilter filter = new OptimizedAutoConfigurationImportFilter();
-		filter.setEnvironment(new MockEnvironment());
-
-		System.setProperty("spring.aot.processing", "true");
-		try {
-			String[] candidates = { "com.example.FooAutoConfiguration", "com.example.BarAutoConfiguration" };
-
-			boolean[] result = filter.match(candidates, null);
-
-			assertThat(result).containsOnly(true);
-		}
-		finally {
-			System.clearProperty("spring.aot.processing");
-		}
-	}
-
-	@Test
 	void match_returnsAllTrueWhenNoTrainingFile() {
 		OptimizedAutoConfigurationImportFilter filter = new OptimizedAutoConfigurationImportFilter();
 		filter.setEnvironment(new MockEnvironment());

@@ -86,9 +86,6 @@
                 <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                   <resource>META-INF/spring.factories</resource>
                 </transformer>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                  <resource>META-INF/spring/aot.factories</resource>
-                </transformer>
               </transformers>
             </configuration>
           </execution>

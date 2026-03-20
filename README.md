@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/actions/workflows/ci.yml/badge.svg)](https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/actions/workflows/ci.yml)
 [![Benchmarks](https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/actions/workflows/benchmarks.yml/badge.svg)](https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/actions/workflows/benchmarks.yml)
-[![Native Benchmarks](https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/actions/workflows/benchmarks-native.yml/badge.svg)](https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/actions/workflows/benchmarks-native.yml)
 [![Maven Central](https://img.shields.io/maven-central/v/com.fortytwotalents/autoconfiguration-optimizer-core.svg?label=Maven%20Central)](https://search.maven.org/artifact/com.fortytwotalents/autoconfiguration-optimizer-core)
 [![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/com.fortytwotalents.autoconfiguration-optimizer.svg)](https://plugins.gradle.org/plugin/com.fortytwotalents.autoconfiguration-optimizer)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -136,46 +135,6 @@ Run the training step (automatically wired into `jar`/`bootJar`):
 
 Re-run training whenever your application's dependencies change significantly.
 
-## GraalVM Native Image & AOT Support
-
-The optimizer core is compatible with GraalVM native images and Spring Boot's AOT processing:
-
-- **Resource hints** are registered via `AutoConfigurationOptimizerRuntimeHints` to include the properties file in native images
-- **Reflection hints** are registered for `OptimizedAutoConfigurationImportFilter` and `TrainingRunApplicationListener`
-- Run the training run and inject step **before** `spring-boot:process-aot` to get maximum benefit
-
-```bash
-# Recommended build order for native images:
-mvn autoconfiguration-optimizer:train          # 1. Training run
-mvn autoconfiguration-optimizer:inject         # 2. Inject optimizer core
-mvn spring-boot:process-aot                   # 3. AOT processing
-mvn -Pnative native:compile                   # 4. Native compilation
-```
-
-### Does the optimizer help for native images?
-
-Short answer: **the optimizer's primary value is for JVM deployments**. Here is why:
-
-| Mode | Typical startup | Optimizer impact |
-|---|---|---|
-| JVM (baseline) | 1 500 – 3 000 ms | — |
-| JVM (optimized) | 1 200 – 2 500 ms | ~10 – 20 % faster |
-| GraalVM native image | 50 – 400 ms | Minimal |
-
-GraalVM native images already start dramatically faster because Spring Boot's AOT
-processing evaluates and resolves auto-configuration conditions **at build time**, not
-at runtime. The `AutoConfigurationImportFilter` extension point used by this optimizer
-may not be invoked at all during a native image startup. Any remaining difference (if
-any) is expected to be within measurement noise.
-
-This does **not** mean native images are incompatible with the optimizer — the classes
-and resource hints are fully registered — but **you should not expect a meaningful
-startup-time reduction** from the optimizer when deploying a native image.
-
-> **[View native image benchmark results →](../../actions/workflows/benchmarks-native.yml)**  
-> Trigger the `Native Image Benchmarks` workflow manually and download the
-> `benchmark-report-native` artifact to see exact numbers on your runner.
-
 ## Configuration Reference
 
 ### Core Library Properties
@@ -233,16 +192,6 @@ mvn package -DskipTests
 
 # View the report
 cat benchmarks/results/benchmark-report.md
-```
-
-To run native image benchmarks locally you need GraalVM with `native-image` installed:
-
-```bash
-# Build + run native benchmarks (build takes ~5-10 minutes)
-./benchmarks/scripts/run-benchmarks-native.sh
-
-# View the report
-cat benchmarks/results-native/benchmark-report.md
 ```
 
 Benchmarks also run automatically in CI on every push to `main` and results are available as [GitHub Actions artifacts](../../actions/workflows/benchmarks.yml).
