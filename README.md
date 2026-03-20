@@ -227,7 +227,12 @@ spring-boot-autoconfiguration-optimizer/
 
 ## Contributing
 
-See [CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md) for community standards.
+See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for development setup and guidelines,
+and [CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md) for community standards.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a history of notable changes.
 
 ## Security
 

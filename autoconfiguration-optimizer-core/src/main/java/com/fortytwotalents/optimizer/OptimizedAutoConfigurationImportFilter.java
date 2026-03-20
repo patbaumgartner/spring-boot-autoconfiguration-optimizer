@@ -186,7 +186,8 @@ public class OptimizedAutoConfigurationImportFilter
 		Resource resource = new ClassPathResource(OPTIMIZER_PROPERTIES_FILE, loader);
 
 		if (!resource.exists()) {
-			log.debug("Spring Boot Autoconfiguration Optimizer: No training file found at classpath:{}. " + "Running with all auto-configurations.", OPTIMIZER_PROPERTIES_FILE);
+			log.debug("Spring Boot Autoconfiguration Optimizer: No training file found at classpath:{}. "
+					+ "Running with all auto-configurations.", OPTIMIZER_PROPERTIES_FILE);
 			return null;
 		}
 
@@ -199,7 +200,9 @@ public class OptimizedAutoConfigurationImportFilter
 			String loadedConfigsValue = props.getProperty(LOADED_CONFIGURATIONS_KEY);
 
 			if (loadedConfigsValue == null || loadedConfigsValue.isBlank()) {
-				log.warn("Spring Boot Autoconfiguration Optimizer: Training file exists but contains no loaded configurations. " + "Running with all auto-configurations.");
+				log.warn(
+						"Spring Boot Autoconfiguration Optimizer: Training file exists but contains no loaded configurations. "
+								+ "Running with all auto-configurations.");
 				return null;
 			}
 
@@ -217,7 +220,8 @@ public class OptimizedAutoConfigurationImportFilter
 			return allowed;
 		}
 		catch (IOException e) {
-			log.error("Spring Boot Autoconfiguration Optimizer: Failed to read training file, " + "running with all auto-configurations", e);
+			log.error("Spring Boot Autoconfiguration Optimizer: Failed to read training file, "
+					+ "running with all auto-configurations", e);
 			return null;
 		}
 	}
