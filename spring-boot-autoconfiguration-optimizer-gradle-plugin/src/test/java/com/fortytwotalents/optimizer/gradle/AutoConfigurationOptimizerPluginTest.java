@@ -13,110 +13,110 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class AutoConfigurationOptimizerPluginTest {
 
-    @TempDir
-    Path projectDir;
+	@TempDir
+	Path projectDir;
 
-    @Test
-    void pluginRegistersTrainTask() throws IOException {
-        // Create a minimal build.gradle
-        Files.writeString(projectDir.resolve("build.gradle"), """
-                plugins {
-                    id 'com.fortytwotalents.autoconfiguration-optimizer'
-                }
-                """);
+	@Test
+	void pluginRegistersTrainTask() throws IOException {
+		// Create a minimal build.gradle
+		Files.writeString(projectDir.resolve("build.gradle"), """
+				plugins {
+					id 'com.fortytwotalents.autoconfiguration-optimizer'
+				}
+				""");
 
-        Files.writeString(projectDir.resolve("settings.gradle"), """
-                rootProject.name = 'test-project'
-                """);
+		Files.writeString(projectDir.resolve("settings.gradle"), """
+				rootProject.name = 'test-project'
+				""");
 
-        BuildResult result = GradleRunner.create()
-                .withProjectDir(projectDir.toFile())
-                .withArguments("tasks", "--all")
-                .withPluginClasspath()
-                .build();
+		BuildResult result = GradleRunner.create()
+				.withProjectDir(projectDir.toFile())
+				.withArguments("tasks", "--all")
+				.withPluginClasspath()
+				.build();
 
-        assertThat(result.getOutput()).contains("trainAutoconfiguration");
-        assertThat(result.getOutput()).contains("copyAutoconfigurationOptimizerFile");
-    }
+		assertThat(result.getOutput()).contains("trainAutoconfiguration");
+		assertThat(result.getOutput()).contains("copyAutoconfigurationOptimizerFile");
+	}
 
-    @Test
-    void pluginRegistersInjectTask() throws IOException {
-        Files.writeString(projectDir.resolve("build.gradle"), """
-                plugins {
-                    id 'java'
-                    id 'com.fortytwotalents.autoconfiguration-optimizer'
-                }
-                """);
+	@Test
+	void pluginRegistersInjectTask() throws IOException {
+		Files.writeString(projectDir.resolve("build.gradle"), """
+				plugins {
+					id 'java'
+					id 'com.fortytwotalents.autoconfiguration-optimizer'
+				}
+				""");
 
-        Files.writeString(projectDir.resolve("settings.gradle"), """
-                rootProject.name = 'test-project'
-                """);
+		Files.writeString(projectDir.resolve("settings.gradle"), """
+				rootProject.name = 'test-project'
+				""");
 
-        BuildResult result = GradleRunner.create()
-                .withProjectDir(projectDir.toFile())
-                .withArguments("tasks", "--all")
-                .withPluginClasspath()
-                .build();
+		BuildResult result = GradleRunner.create()
+				.withProjectDir(projectDir.toFile())
+				.withArguments("tasks", "--all")
+				.withPluginClasspath()
+				.build();
 
-        assertThat(result.getOutput()).contains("injectOptimizerCore");
-    }
+		assertThat(result.getOutput()).contains("injectOptimizerCore");
+	}
 
-    @Test
-    void pluginAppliesWithoutErrors() throws IOException {
-        Files.writeString(projectDir.resolve("build.gradle"), """
-                plugins {
-                    id 'com.fortytwotalents.autoconfiguration-optimizer'
-                }
-                
-                autoconfigurationOptimizer {
-                    mainClass = 'com.example.TestApplication'
-                    timeout = 60
-                }
-                """);
+	@Test
+	void pluginAppliesWithoutErrors() throws IOException {
+		Files.writeString(projectDir.resolve("build.gradle"), """
+				plugins {
+					id 'com.fortytwotalents.autoconfiguration-optimizer'
+				}
+				
+				autoconfigurationOptimizer {
+					mainClass = 'com.example.TestApplication'
+					timeout = 60
+				}
+				""");
 
-        Files.writeString(projectDir.resolve("settings.gradle"), """
-                rootProject.name = 'test-project'
-                """);
+		Files.writeString(projectDir.resolve("settings.gradle"), """
+				rootProject.name = 'test-project'
+				""");
 
-        BuildResult result = GradleRunner.create()
-                .withProjectDir(projectDir.toFile())
-                .withArguments("help")
-                .withPluginClasspath()
-                .build();
+		BuildResult result = GradleRunner.create()
+				.withProjectDir(projectDir.toFile())
+				.withArguments("help")
+				.withPluginClasspath()
+				.build();
 
-        assertThat(result.getOutput()).doesNotContain("ERROR");
-    }
+		assertThat(result.getOutput()).doesNotContain("ERROR");
+	}
 
-    @Test
-    void bootJarDependsOnInjectTask() throws IOException {
-        // Minimal settings that pull Spring Boot from Gradle Plugin Portal
-        Files.writeString(projectDir.resolve("settings.gradle"), """
-                pluginManagement {
-                    repositories {
-                        gradlePluginPortal()
-                        mavenCentral()
-                    }
-                }
-                rootProject.name = 'test-project'
-                """);
+	@Test
+	void bootJarDependsOnInjectTask() throws IOException {
+		// Minimal settings that pull Spring Boot from Gradle Plugin Portal
+		Files.writeString(projectDir.resolve("settings.gradle"), """
+				pluginManagement {
+					repositories {
+						gradlePluginPortal()
+						mavenCentral()
+					}
+				}
+				rootProject.name = 'test-project'
+				""");
 
-        Files.writeString(projectDir.resolve("build.gradle"), """
-                plugins {
-                    id 'java'
-                    id 'org.springframework.boot' version '4.0.3'
-                    id 'com.fortytwotalents.autoconfiguration-optimizer'
-                }
-                repositories {
-                    mavenCentral()
-                }
-                """);
+		Files.writeString(projectDir.resolve("build.gradle"), """
+				plugins {
+					id 'java'
+					id 'org.springframework.boot' version '4.0.3'
+					id 'com.fortytwotalents.autoconfiguration-optimizer'
+				}
+				repositories {
+					mavenCentral()
+				}
+				""");
 
-        BuildResult result = GradleRunner.create()
-                .withProjectDir(projectDir.toFile())
-                .withArguments("bootJar", "--dry-run")
-                .withPluginClasspath()
-                .build();
+		BuildResult result = GradleRunner.create()
+				.withProjectDir(projectDir.toFile())
+				.withArguments("bootJar", "--dry-run")
+				.withPluginClasspath()
+				.build();
 
-        assertThat(result.getOutput()).contains(":injectOptimizerCore");
-    }
+		assertThat(result.getOutput()).contains(":injectOptimizerCore");
+	}
 }

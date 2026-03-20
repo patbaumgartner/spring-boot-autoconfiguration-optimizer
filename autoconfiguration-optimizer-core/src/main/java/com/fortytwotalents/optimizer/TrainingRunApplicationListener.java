@@ -136,7 +136,7 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 			// bean-method
 			// entry, which confirms it was loaded unconditionally
 			return classesFromMethodEntries.contains(config);
-		}).sorted().collect(Collectors.toList());
+		}).sorted().toList();
 	}
 
 	/**

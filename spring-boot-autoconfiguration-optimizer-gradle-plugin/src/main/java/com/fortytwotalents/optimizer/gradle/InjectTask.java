@@ -37,12 +37,6 @@ import java.nio.file.Path;
 public abstract class InjectTask extends DefaultTask {
 
 	/**
-	 * Creates a new {@code InjectTask}.
-	 */
-	public InjectTask() {
-	}
-
-	/**
 	 * The directory into which the core classes and resources are injected
 	 * (typically the
 	 * main classes output directory, e.g. {@code build/classes/java/main}).

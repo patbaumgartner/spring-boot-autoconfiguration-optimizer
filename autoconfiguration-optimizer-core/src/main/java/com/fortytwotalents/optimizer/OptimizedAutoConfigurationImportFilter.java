@@ -76,8 +76,6 @@ public class OptimizedAutoConfigurationImportFilter
 
 	private Set<String> allowedConfigurations;
 
-	private boolean allCandidatesInitialized;
-
 	private Set<String> allCandidates;
 
 	@Override
@@ -173,9 +171,8 @@ public class OptimizedAutoConfigurationImportFilter
 	 * through).
 	 */
 	Set<String> getAllCandidates() {
-		if (!allCandidatesInitialized) {
+		if (allCandidates == null) {
 			allCandidates = loadAllCandidates();
-			allCandidatesInitialized = true;
 		}
 		return allCandidates;
 	}
