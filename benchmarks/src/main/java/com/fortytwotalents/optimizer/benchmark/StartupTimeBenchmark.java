@@ -47,7 +47,7 @@ import java.util.regex.Pattern;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Warmup(iterations = 3, time = 1)
 @Measurement(iterations = 5, time = 1)
-@Fork(value = 1, jvmArgsAppend = {"-Xmx256m"})
+@Fork(value = 1, jvmArgsAppend = { "-Xmx256m" })
 public class StartupTimeBenchmark {
 
 	private static final Pattern STARTED_PATTERN = Pattern.compile("Started .+ in ([\\d.]+) seconds");
