@@ -1,0 +1,282 @@
+name: Native Image Benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: 'Number of benchmark iterations'
+        required: false
+        default: '10'
+
+permissions:
+  contents: write
+
+jobs:
+  benchmark-native:
+    name: Native Image - Startup Time Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up GraalVM (JDK 21 with native-image)
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm'
+          native-image-job-reports: 'true'
+          cache: 'maven'
+
+      - name: Install Maven plugin to local repository
+        run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl spring-boot-autoconfiguration-optimizer-maven-plugin -am
+
+      - name: Build PetClinic sample (JVM mode for training)
+        run: mvn --batch-mode --no-transfer-progress package -DskipTests -q -f integration-tests/petclinic-sample/pom.xml
+
+      - name: Run training run on PetClinic
+        id: training
+        run: |
+          mkdir -p benchmarks/results-native/training
+          java \
+            -Dautoconfiguration.optimizer.training-run=true \
+            -Dautoconfiguration.optimizer.exit-after-training=true \
+            -Dautoconfiguration.optimizer.output-directory=benchmarks/results-native/training \
+            -Dautoconfiguration.optimizer.output-file=autoconfiguration-optimizer.properties \
+            -jar integration-tests/petclinic-sample/target/autoconfiguration-optimizer-petclinic-sample-*.jar \
+            --spring.main.banner-mode=off \
+            --server.port=0 \
+            --spring.jpa.show-sql=false &
+          TRAINING_PID=$!
+
+          END_TIME=$(($(date +%s) + 120))
+          while kill -0 "${TRAINING_PID}" 2>/dev/null && [ "$(date +%s)" -lt "${END_TIME}" ]; do
+            sleep 1
+          done
+
+          if kill -0 "${TRAINING_PID}" 2>/dev/null; then
+            echo "::error::Training run did not complete within 120 seconds, force-killing"
+            kill -9 "${TRAINING_PID}" 2>/dev/null || true
+          fi
+          wait "${TRAINING_PID}" 2>/dev/null || true
+
+          echo "Training properties:"
+          cat benchmarks/results-native/training/autoconfiguration-optimizer.properties
+
+          TRAINING_AVAILABLE=$(grep -oP '(?<=# Total available auto-configurations: )\d+' benchmarks/results-native/training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_LOADED=$(grep -oP '(?<=# Auto-configurations loaded during training: )\d+' benchmarks/results-native/training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations to skip at startup: )\d+' benchmarks/results-native/training/autoconfiguration-optimizer.properties || echo "")
+          echo "training_available=${TRAINING_AVAILABLE}" >> $GITHUB_OUTPUT
+          echo "training_loaded=${TRAINING_LOADED}" >> $GITHUB_OUTPUT
+          echo "training_excluded=${TRAINING_EXCLUDED}" >> $GITHUB_OUTPUT
+
+      - name: Bake optimizer properties into build output
+        run: |
+          mkdir -p integration-tests/petclinic-sample/target/classes/META-INF
+          cp benchmarks/results-native/training/autoconfiguration-optimizer.properties \
+             integration-tests/petclinic-sample/target/classes/META-INF/
+
+      - name: Build native image
+        run: |
+          mvn --batch-mode --no-transfer-progress package -DskipTests -Pnative \
+            -f integration-tests/petclinic-sample/pom.xml
+          ls -lh integration-tests/petclinic-sample/target/petclinic
+
+      - name: Run native baseline measurements (optimizer disabled)
+        id: baseline
+        run: |
+          BINARY="integration-tests/petclinic-sample/target/petclinic"
+          TOTAL=0
+          COUNT=0
+          for i in $(seq 1 ${{ github.event.inputs.iterations || '10' }}); do
+            TMPFILE=$(mktemp)
+            "${BINARY}" \
+              -Dautoconfiguration.optimizer.enabled=false \
+              --spring.main.banner-mode=off \
+              --server.port=0 \
+              --spring.jpa.show-sql=false > "${TMPFILE}" 2>&1 &
+            PROC_PID=$!
+
+            OUTPUT=""
+            END_TIME=$(($(date +%s) + 30))
+            while [ "$(date +%s)" -lt "${END_TIME}" ]; do
+              OUTPUT=$(grep -m1 "Started .* in" "${TMPFILE}" 2>/dev/null || true)
+              if [ -n "${OUTPUT}" ]; then break; fi
+              if ! kill -0 "${PROC_PID}" 2>/dev/null; then
+                OUTPUT=$(grep -m1 "Started .* in" "${TMPFILE}" 2>/dev/null || true)
+                break
+              fi
+              sleep 0.1
+            done
+
+            kill "${PROC_PID}" 2>/dev/null || true
+            for shutdown_attempt in $(seq 1 10); do
+              if ! kill -0 "${PROC_PID}" 2>/dev/null; then break; fi
+              sleep 0.2
+            done
+            kill -9 "${PROC_PID}" 2>/dev/null || true
+            wait "${PROC_PID}" 2>/dev/null || true
+            rm -f "${TMPFILE}"
+
+            SECONDS_VAL=$(echo "${OUTPUT}" | grep -oP 'in \K[\d.]+(?= seconds)' || echo "")
+            if [ -n "${SECONDS_VAL}" ]; then
+              MS=$(printf "%.0f" $(echo "${SECONDS_VAL} * 1000" | bc))
+              TOTAL=$((TOTAL + MS))
+              COUNT=$((COUNT + 1))
+              echo "Native baseline run ${i}: ${MS}ms"
+            fi
+          done
+
+          if [ ${COUNT} -gt 0 ]; then
+            AVG=$((TOTAL / COUNT))
+            echo "Native baseline average: ${AVG}ms"
+            echo "baseline_avg=${AVG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run native optimized measurements (optimizer enabled)
+        id: optimized
+        run: |
+          BINARY="integration-tests/petclinic-sample/target/petclinic"
+          TOTAL=0
+          COUNT=0
+          for i in $(seq 1 ${{ github.event.inputs.iterations || '10' }}); do
+            TMPFILE=$(mktemp)
+            "${BINARY}" \
+              -Dautoconfiguration.optimizer.enabled=true \
+              --spring.main.banner-mode=off \
+              --server.port=0 \
+              --spring.jpa.show-sql=false > "${TMPFILE}" 2>&1 &
+            PROC_PID=$!
+
+            OUTPUT=""
+            END_TIME=$(($(date +%s) + 30))
+            while [ "$(date +%s)" -lt "${END_TIME}" ]; do
+              OUTPUT=$(grep -m1 "Started .* in" "${TMPFILE}" 2>/dev/null || true)
+              if [ -n "${OUTPUT}" ]; then break; fi
+              if ! kill -0 "${PROC_PID}" 2>/dev/null; then
+                OUTPUT=$(grep -m1 "Started .* in" "${TMPFILE}" 2>/dev/null || true)
+                break
+              fi
+              sleep 0.1
+            done
+
+            kill "${PROC_PID}" 2>/dev/null || true
+            for shutdown_attempt in $(seq 1 10); do
+              if ! kill -0 "${PROC_PID}" 2>/dev/null; then break; fi
+              sleep 0.2
+            done
+            kill -9 "${PROC_PID}" 2>/dev/null || true
+            wait "${PROC_PID}" 2>/dev/null || true
+            rm -f "${TMPFILE}"
+
+            SECONDS_VAL=$(echo "${OUTPUT}" | grep -oP 'in \K[\d.]+(?= seconds)' || echo "")
+            if [ -n "${SECONDS_VAL}" ]; then
+              MS=$(printf "%.0f" $(echo "${SECONDS_VAL} * 1000" | bc))
+              TOTAL=$((TOTAL + MS))
+              COUNT=$((COUNT + 1))
+              echo "Native optimized run ${i}: ${MS}ms"
+            fi
+          done
+
+          if [ ${COUNT} -gt 0 ]; then
+            AVG=$((TOTAL / COUNT))
+            echo "Native optimized average: ${AVG}ms"
+            echo "optimized_avg=${AVG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate benchmark report
+        run: |
+          mkdir -p benchmarks/results-native
+          BASELINE_AVG="${{ steps.baseline.outputs.baseline_avg }}"
+          OPTIMIZED_AVG="${{ steps.optimized.outputs.optimized_avg }}"
+          GRAALVM_VERSION=$(native-image --version 2>&1 | head -1)
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          if [ -n "${BASELINE_AVG}" ] && [ -n "${OPTIMIZED_AVG}" ] && \
+             [ "${BASELINE_AVG}" -gt 0 ] && [ "${OPTIMIZED_AVG}" -gt 0 ]; then
+            DIFFERENCE=$((BASELINE_AVG - OPTIMIZED_AVG))
+            DIFFERENCE_PCT=$(echo "scale=1; ${DIFFERENCE} * 100 / ${BASELINE_AVG}" | bc)
+          else
+            DIFFERENCE=0
+            DIFFERENCE_PCT="N/A"
+            BASELINE_AVG="${BASELINE_AVG:-N/A}"
+            OPTIMIZED_AVG="${OPTIMIZED_AVG:-N/A}"
+          fi
+
+          cat > benchmarks/results-native/benchmark-report.md << EOF
+          # Spring Boot Autoconfiguration Optimizer - Native Image Benchmark Results
+
+          **Generated:** ${TIMESTAMP}
+          **GraalVM:** ${GRAALVM_VERSION}
+          **Iterations:** ${{ github.event.inputs.iterations || '10' }}
+          **Target Application:** Spring PetClinic Sample (Web + JPA + Actuator + Cache + Validation)
+          **CI Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          ## Context
+
+          GraalVM native images start dramatically faster than JVM-mode Spring Boot because
+          Spring Boot's AOT processing pre-resolves which beans and configurations apply at
+          **build time**. As a result, the \`AutoConfigurationImportFilter\` that powers the
+          optimizer may not be invoked during native startup at all. The figures below
+          confirm whether the optimizer provides any additional benefit in native mode.
+
+          For JVM-mode results (where the optimizer's impact is most significant), see the
+          Maven/Gradle benchmark reports.
+
+          ## Auto-Configuration Stats (from training run)
+
+          | Metric | Count |
+          |---|---|
+          | Total available auto-configurations | ${{ steps.training.outputs.training_available || 'N/A' }} |
+          | Loaded (training set) | ${{ steps.training.outputs.training_loaded || 'N/A' }} |
+          | Excluded by optimizer | ${{ steps.training.outputs.training_excluded || 'N/A' }} |
+
+          ## Startup Time Results (Native Image)
+
+          | Configuration | Average Startup Time |
+          |---|---|
+          | ⚪ Native baseline (optimizer disabled) | ${BASELINE_AVG}ms |
+          | 🟢 Native optimized (optimizer enabled) | ${OPTIMIZED_AVG}ms |
+          | **Difference** | **${DIFFERENCE}ms (${DIFFERENCE_PCT}%)** |
+          EOF
+
+      - name: Upload benchmark report
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-report-native
+          path: benchmarks/results-native/
+          retention-days: 90
+
+      - name: Post benchmark summary
+        run: |
+          BASELINE="${{ steps.baseline.outputs.baseline_avg }}"
+          OPTIMIZED="${{ steps.optimized.outputs.optimized_avg }}"
+
+          if [ -n "${BASELINE}" ] && [ -n "${OPTIMIZED}" ] && \
+             [ "${BASELINE}" -gt 0 ] && [ "${OPTIMIZED}" -gt 0 ]; then
+            DIFFERENCE=$((BASELINE - OPTIMIZED))
+            PCT=$(echo "scale=1; ${DIFFERENCE} * 100 / ${BASELINE}" | bc)
+          else
+            DIFFERENCE="N/A"
+            PCT="N/A"
+          fi
+
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## 🚀 Native Image Benchmark Results: Spring Boot Autoconfiguration Optimizer
+
+          | Metric | Value |
+          |--------|-------|
+          | ⚪ Native baseline (optimizer disabled) | ${BASELINE:-N/A}ms |
+          | 🟢 Native optimized (optimizer enabled) | ${OPTIMIZED:-N/A}ms |
+          | 📈 Difference | ${DIFFERENCE}ms |
+          | 📊 Relative difference | ${PCT}% |
+          | 🔎 Available auto-configurations | ${{ steps.training.outputs.training_available || 'N/A' }} |
+          | ✅ Loaded (training set) | ${{ steps.training.outputs.training_loaded || 'N/A' }} |
+          | ⛔ Excluded by optimizer | ${{ steps.training.outputs.training_excluded || 'N/A' }} |
+
+          > **Note:** In native image mode, Spring Boot's AOT processing pre-resolves
+          > auto-configuration imports at build time. The optimizer's runtime filter
+          > may not be invoked, so any difference shown above is expected to be small.
+          > The optimizer's primary value is for JVM deployments.
+
+          *Target application: PetClinic Sample (Web + JPA + Actuator + Cache + Validation)*
+          EOF
