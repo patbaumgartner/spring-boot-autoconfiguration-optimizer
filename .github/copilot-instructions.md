@@ -90,6 +90,7 @@ cd spring-boot-autoconfiguration-optimizer-gradle-plugin
 - Follow standard Java conventions: 4-space indentation, Javadoc for public APIs, focused methods.
 - Do **not** add comments unless they match the style of existing comments or explain a genuinely complex decision.
 - Use existing libraries. Only add new dependencies if absolutely necessary.
+- Every commit message and **pull request title** must follow the [Conventional Commits](https://www.conventionalcommits.org/) specification: `type(optional-scope): short description`. Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`. PR titles are validated automatically by the CI workflow.
 
 ---
 
@@ -195,4 +196,5 @@ Before opening a PR, ensure:
 2. Gradle plugin tests pass (`./gradlew --no-daemon test` from `spring-boot-autoconfiguration-optimizer-gradle-plugin/`).
 3. Spring Java Format applied (`mvn io.spring.javaformat:spring-javaformat-maven-plugin:apply`).
 4. Javadoc present for any new public API.
-5. PR description includes type of change, testing done, and related issues.
+5. PR title follows the Conventional Commits format (`type(scope): description`). See the **Code Style & Conventions** section above for allowed types.
+6. PR description includes type of change, testing done, and related issues.
