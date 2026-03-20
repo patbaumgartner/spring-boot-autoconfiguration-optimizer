@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Native image benchmark script (`benchmarks/scripts/run-benchmarks-native.sh`) and CI
+  workflow (`benchmarks-native.yml`) to measure and document the optimizer's impact on
+  GraalVM native image startup time.
+- Native Maven profile (`-Pnative`) in the PetClinic sample for building native images
+  with `native-maven-plugin` and Spring Boot AOT processing.
+- Clarified README: the optimizer's primary benefit is for JVM deployments; native images
+  already start in 50-400 ms via AOT pre-resolution and gain little to no additional
+  improvement from the optimizer's runtime filter.
+
 ## [1.0.0] - 2026-03-20
 
 ### Added
