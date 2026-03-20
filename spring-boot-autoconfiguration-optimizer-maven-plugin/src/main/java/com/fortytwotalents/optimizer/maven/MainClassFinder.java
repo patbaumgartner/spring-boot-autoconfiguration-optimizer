@@ -8,7 +8,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -48,7 +47,7 @@ class MainClassFinder {
 
 		List<Path> classFiles;
 		try (Stream<Path> stream = Files.walk(classesDirectory)) {
-			classFiles = stream.filter(p -> p.toString().endsWith(".class")).collect(Collectors.toList());
+			classFiles = stream.filter(p -> p.toString().endsWith(".class")).toList();
 		}
 
 		Set<String> springBootAnnotations = new LinkedHashSet<>();

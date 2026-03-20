@@ -11,9 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Enumeration;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.jar.JarEntry;
@@ -114,14 +112,8 @@ final class CoreInjector {
 	}
 
 	private static boolean shouldSkipEntry(String name) {
-		if ("META-INF/MANIFEST.MF".equals(name)) {
-			return true;
-		}
-		// Skip JAR signature files
-		if (name.startsWith("META-INF/") && (name.endsWith(".SF") || name.endsWith(".RSA") || name.endsWith(".DSA"))) {
-			return true;
-		}
-		return false;
+		return "META-INF/MANIFEST.MF".equals(name) || (name.startsWith("META-INF/")
+				&& (name.endsWith(".SF") || name.endsWith(".RSA") || name.endsWith(".DSA")));
 	}
 
 	/**
@@ -168,14 +160,9 @@ final class CoreInjector {
 		}
 		else {
 			Files.createDirectories(target.getParent());
-			// Re-read from coreProps to write
-			Map<String, String> entries = new LinkedHashMap<>();
-			for (String key : coreProps.stringPropertyNames()) {
-				entries.put(key, coreProps.getProperty(key));
-			}
 			try (var writer = Files.newBufferedWriter(target, StandardCharsets.UTF_8)) {
-				for (Map.Entry<String, String> e : entries.entrySet()) {
-					writer.write(e.getKey() + "=\\\n  " + e.getValue().replace(",", ",\\\n  "));
+				for (String key : coreProps.stringPropertyNames()) {
+					writer.write(key + "=\\\n  " + coreProps.getProperty(key).replace(",", ",\\\n  "));
 					writer.newLine();
 				}
 			}
@@ -189,28 +176,14 @@ final class CoreInjector {
 	 */
 	private static void mergeLineBasedFile(InputStream source, Path target) throws IOException {
 		String coreContent = new String(source.readAllBytes(), StandardCharsets.UTF_8);
-		Set<String> coreLines = new LinkedHashSet<>();
-		for (String line : coreContent.split("\\r?\\n")) {
-			String trimmed = line.trim();
-			if (!trimmed.isEmpty() && !trimmed.startsWith("#")) {
-				coreLines.add(trimmed);
-			}
-		}
+		Set<String> coreLines = parseLines(coreContent);
 
 		if (Files.exists(target)) {
 			String existing = Files.readString(target, StandardCharsets.UTF_8);
-			Set<String> existingLines = new LinkedHashSet<>();
-			for (String line : existing.split("\\r?\\n")) {
-				String trimmed = line.trim();
-				if (!trimmed.isEmpty() && !trimmed.startsWith("#")) {
-					existingLines.add(trimmed);
-				}
-			}
-
-			coreLines.removeAll(existingLines);
+			coreLines.removeAll(parseLines(existing));
 			if (!coreLines.isEmpty()) {
-				String toAppend = "\n" + String.join("\n", coreLines) + "\n";
-				Files.writeString(target, existing + toAppend, StandardCharsets.UTF_8, StandardOpenOption.WRITE);
+				Files.writeString(target, existing + "\n" + String.join("\n", coreLines) + "\n", StandardCharsets.UTF_8,
+						StandardOpenOption.WRITE);
 			}
 		}
 		else {
@@ -224,6 +197,17 @@ final class CoreInjector {
 		for (String part : value.split(",")) {
 			String trimmed = part.trim();
 			if (!trimmed.isEmpty()) {
+				result.add(trimmed);
+			}
+		}
+		return result;
+	}
+
+	private static Set<String> parseLines(String content) {
+		Set<String> result = new LinkedHashSet<>();
+		for (String line : content.split("\\r?\\n")) {
+			String trimmed = line.trim();
+			if (!trimmed.isEmpty() && !trimmed.startsWith("#")) {
 				result.add(trimmed);
 			}
 		}
