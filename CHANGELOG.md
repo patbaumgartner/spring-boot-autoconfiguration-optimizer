@@ -10,8 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Rewrote entire git commit history to follow [Conventional Commits](https://www.conventionalcommits.org/)
-  specification. All commit messages now use standard types (`feat`, `fix`, `docs`, `chore`,
-  `ci`, `refactor`, `build`, `style`) with proper scopes and descriptions.
+  specification by applying `git filter-branch --msg-filter` with a comprehensive message mapping.
+  All commit messages now use standard types (`feat`, `fix`, `docs`, `chore`, `ci`, `refactor`,
+  `build`, `style`) with proper scopes and descriptions. The rewrite requires a force-push to
+  take effect on the remote (`git push --force-with-lease origin main`).
 
 ## [1.0.0] - 2026-03-20
 
