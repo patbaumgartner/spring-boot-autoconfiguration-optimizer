@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Rewrote entire git commit history to follow [Conventional Commits](https://www.conventionalcommits.org/)
+  specification. All commit messages now use standard types (`feat`, `fix`, `docs`, `chore`,
+  `ci`, `refactor`, `build`, `style`) with proper scopes and descriptions.
+
 ## [1.0.0] - 2026-03-20
 
 ### Added
