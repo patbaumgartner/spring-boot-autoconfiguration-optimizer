@@ -28,6 +28,9 @@ import java.util.stream.Collectors;
  * <ol>
  * <li>{@code autoconfiguration.optimizer.enabled} is {@code true} (default)</li>
  * <li>{@code autoconfiguration.optimizer.training-run} is {@code false} (default)</li>
+ * <li>The {@code spring.aot.processing} system property is {@code false} (default)
+ * &mdash; the filter is always disabled during GraalVM AOT processing so that all
+ * auto-configurations are visible to the AOT hint generator</li>
  * <li>A file named {@code META-INF/autoconfiguration-optimizer.properties} exists on the
  * classpath</li>
  * </ol>
@@ -143,6 +146,10 @@ public class OptimizedAutoConfigurationImportFilter
 		}
 		if (trainingRun) {
 			log.debug("Spring Boot Autoconfiguration Optimizer: Skipping optimization (training run active)");
+			return false;
+		}
+		if (Boolean.getBoolean("spring.aot.processing")) {
+			log.debug("Spring Boot Autoconfiguration Optimizer: Skipping optimization (AOT processing active)");
 			return false;
 		}
 		return true;
