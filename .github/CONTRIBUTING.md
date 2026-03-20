@@ -62,13 +62,51 @@ cd integration-tests/petclinic-sample-gradle && ./gradlew --no-daemon bootJar
   ```
 - Keep methods focused and concise.
 
+## Commit Messages
+
+This project follows the [Conventional Commits](https://www.conventionalcommits.org/) specification.
+Every commit message and **pull request title** must use the format:
+
+```
+type(optional-scope): short description
+```
+
+Allowed types:
+
+| Type       | When to use |
+|------------|-------------|
+| `feat`     | A new feature |
+| `fix`      | A bug fix |
+| `docs`     | Documentation changes only |
+| `style`    | Formatting, whitespace (no logic change) |
+| `refactor` | Code restructuring without a feature or fix |
+| `perf`     | Performance improvements |
+| `test`     | Adding or fixing tests |
+| `build`    | Build system or external dependency changes |
+| `ci`       | CI/CD configuration changes |
+| `chore`    | Miscellaneous maintenance tasks |
+| `revert`   | Reverting a previous commit |
+
+**Examples:**
+
+```
+feat(gradle-plugin): add support for configuring the training timeout
+fix(core): prevent NPE when training file is missing
+docs: update CONTRIBUTING with conventional commit guidelines
+ci: add PR title validation workflow
+chore(deps): bump spring-boot from 4.0.2 to 4.0.3
+```
+
+PR titles are validated automatically by the [Conventional Commits CI workflow](.github/workflows/conventional-commits.yml).
+
 ## Pull Request Process
 
 1. Fork the repository and create a feature branch.
 2. Apply code formatting (see above) before committing.
 3. Ensure all tests pass (Maven + Gradle plugin).
 4. Update `CHANGELOG.md` under the `[Unreleased]` section for significant changes.
-5. Open a pull request targeting the `main` branch and fill in the PR template.
+5. Open a pull request targeting the `main` branch, using a **conventional commit** format for the PR title.
+6. Fill in the PR template.
 
 ## Reporting Issues
 

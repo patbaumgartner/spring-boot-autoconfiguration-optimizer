@@ -2,6 +2,10 @@
 
 <!-- A clear description of what this PR does -->
 
+<!-- ⚠️ PR title must follow Conventional Commits format: type(scope): description
+     Example: feat(core): add support for custom output file names
+     See CONTRIBUTING.md for the full list of allowed types. -->
+
 ## Type of Change
 
 - [ ] 🐛 Bug fix (non-breaking change that fixes an issue)
