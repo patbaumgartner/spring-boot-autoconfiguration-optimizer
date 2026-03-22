@@ -71,7 +71,8 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 						+ "Detected {} loaded auto-configurations out of {} available ({} will be skipped at startup).");
 		}
 		catch (Exception e) {
-			log.error("Spring Boot Autoconfiguration Optimizer: Training run failed" + " (loading/detecting auto-configurations or writing training file)", e);
+			log.error("Spring Boot Autoconfiguration Optimizer: Training run failed"
+					+ " (loading/detecting auto-configurations or writing training file)", e);
 		}
 		finally {
 			if (properties.isExitAfterTraining()) {

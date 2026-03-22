@@ -36,7 +36,6 @@ spring-boot-autoconfiguration-optimizer/
 | `OptimizedAutoConfigurationImportFilter` | core | Reads training file, filters auto-config candidates at import time |
 | `TrainingRunApplicationListener` | core | Captures matched auto-configs during training run and writes properties file |
 | `AutoConfigurationOptimizerProperties` | core | `@ConfigurationProperties(prefix="autoconfiguration.optimizer")` |
-| `AutoConfigurationOptimizerRuntimeHints` | core | GraalVM native image resource and reflection hints |
 | `CoreInjector` | maven + gradle | Finds the core JAR via `ProtectionDomain`, extracts and merges it into the build output |
 | `TrainMojo` / `TrainTask` | maven / gradle | Forks a training run JVM process |
 | `InjectMojo` / `InjectTask` | maven / gradle | Invokes `CoreInjector` to embed the core into the classes directory |
@@ -172,14 +171,6 @@ Gradle 9 `validatePlugins` requires:
 - Unit tests live under `src/test/java` alongside their production classes and follow standard JUnit 5 + AssertJ conventions.
 - Integration tests for the Maven plugin live in `integration-tests/petclinic-sample/` and are **not** part of the root reactor; they must be run separately (see build commands above).
 - Do not remove or weaken existing tests. If a change requires modifying a test, update it to match the new behaviour while keeping coverage equivalent.
-
----
-
-## GraalVM / AOT Compatibility
-
-- Resource hints registered via `AutoConfigurationOptimizerRuntimeHints` include the properties file in native images.
-- Reflection hints cover `OptimizedAutoConfigurationImportFilter` and `TrainingRunApplicationListener`.
-- The recommended native build order is: `train` → `inject` → `spring-boot:process-aot` → `native:compile`.
 
 ---
 
