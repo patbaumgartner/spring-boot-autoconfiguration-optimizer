@@ -135,22 +135,6 @@ Run the training step (automatically wired into `jar`/`bootJar`):
 
 Re-run training whenever your application's dependencies change significantly.
 
-## GraalVM Native Image & AOT Support
-
-The optimizer is fully compatible with GraalVM native images and Spring Boot's AOT processing:
-
-- **Resource hints** are registered via `AutoConfigurationOptimizerRuntimeHints` to include the properties file in native images
-- **Reflection hints** are registered for `OptimizedAutoConfigurationImportFilter` and `TrainingRunApplicationListener`
-- Run the training run and inject step **before** `spring-boot:process-aot` to get maximum benefit
-
-```bash
-# Recommended build order for native images:
-mvn autoconfiguration-optimizer:train          # 1. Training run
-mvn autoconfiguration-optimizer:inject         # 2. Inject optimizer core
-mvn spring-boot:process-aot                   # 3. AOT processing
-mvn -Pnative native:compile                   # 4. Native compilation
-```
-
 ## Configuration Reference
 
 ### Core Library Properties
