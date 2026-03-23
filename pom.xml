@@ -39,7 +39,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!-- Dependency versions -->
-    <spring-boot.version>4.0.3</spring-boot.version>
+    <spring-boot.version>4.0.4</spring-boot.version>
   </properties>
 
   <dependencyManagement>
