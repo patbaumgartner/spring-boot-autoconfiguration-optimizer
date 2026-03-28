@@ -10,6 +10,7 @@
   </parent>
 
   <artifactId>autoconfiguration-optimizer-benchmarks</artifactId>
+
   <name>Spring Boot Autoconfiguration Optimizer - Benchmarks</name>
   <description>Startup time benchmarks for the Spring Boot Autoconfiguration Optimizer.
         Measures startup time improvements achieved by excluding unused auto-configurations.</description>

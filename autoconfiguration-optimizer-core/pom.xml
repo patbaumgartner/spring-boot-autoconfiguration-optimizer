@@ -9,6 +9,7 @@
   </parent>
 
   <artifactId>autoconfiguration-optimizer-core</artifactId>
+
   <name>Spring Boot Autoconfiguration Optimizer - Core</name>
   <description>Core library for Spring Boot auto-configuration optimization</description>
 

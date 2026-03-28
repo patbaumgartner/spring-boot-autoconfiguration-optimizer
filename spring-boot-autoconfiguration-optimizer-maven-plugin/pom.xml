@@ -10,6 +10,7 @@
 
   <artifactId>spring-boot-autoconfiguration-optimizer-maven-plugin</artifactId>
   <packaging>maven-plugin</packaging>
+
   <name>Spring Boot Autoconfiguration Optimizer - Maven Plugin</name>
   <description>Maven plugin for Spring Boot auto-configuration optimization training runs</description>
 
