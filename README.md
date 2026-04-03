@@ -2,8 +2,8 @@
 
 [![CI](https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/actions/workflows/ci.yml/badge.svg)](https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/actions/workflows/ci.yml)
 [![Benchmarks](https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/actions/workflows/benchmarks.yml/badge.svg)](https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer/actions/workflows/benchmarks.yml)
-[![Maven Central](https://img.shields.io/maven-central/v/com.fortytwotalents/autoconfiguration-optimizer-core.svg?label=Maven%20Central)](https://search.maven.org/artifact/com.fortytwotalents/autoconfiguration-optimizer-core)
-[![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/com.fortytwotalents.autoconfiguration-optimizer.svg)](https://plugins.gradle.org/plugin/com.fortytwotalents.autoconfiguration-optimizer)
+[![Maven Central](https://img.shields.io/maven-central/v/com.patbaumgartner/autoconfiguration-optimizer-core.svg?label=Maven%20Central)](https://search.maven.org/artifact/com.patbaumgartner/autoconfiguration-optimizer-core)
+[![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/com.patbaumgartner.autoconfiguration-optimizer.svg)](https://plugins.gradle.org/plugin/com.patbaumgartner.autoconfiguration-optimizer)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Java](https://img.shields.io/badge/Java-17%2B-orange.svg)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
@@ -64,7 +64,7 @@ Add the plugin to your `pom.xml`. The `inject` goal embeds the optimizer core in
 
 ```xml
 <plugin>
-    <groupId>com.fortytwotalents</groupId>
+    <groupId>com.patbaumgartner</groupId>
     <artifactId>spring-boot-autoconfiguration-optimizer-maven-plugin</artifactId>
     <version>1.0.0</version>
     <executions>
@@ -95,7 +95,7 @@ Add the plugin to your `pom.xml`. The `inject` goal embeds the optimizer core in
 Or run the training goal directly on the command line:
 
 ```bash
-mvn com.fortytwotalents:spring-boot-autoconfiguration-optimizer-maven-plugin:train
+mvn com.patbaumgartner:spring-boot-autoconfiguration-optimizer-maven-plugin:train
 
 # Generates target/classes/META-INF/autoconfiguration-optimizer.properties
 ```
@@ -108,7 +108,7 @@ Apply the plugin: the optimizer core is automatically injected into your `bootJa
 
 ```groovy
 plugins {
-    id 'com.fortytwotalents.autoconfiguration-optimizer' version '1.0.0'
+    id 'com.patbaumgartner.autoconfiguration-optimizer' version '1.0.0'
 }
 
 autoconfigurationOptimizer {

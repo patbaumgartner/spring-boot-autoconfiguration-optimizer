@@ -1,0 +1,34 @@
+project:
+  name: spring-boot-autoconfiguration-optimizer
+  description: Analyzes and optimizes Spring Boot auto-configurations to improve startup time
+  links:
+    homepage: https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer
+  authors:
+    - Patrick Baumgartner
+  license: Apache-2.0
+  inceptionYear: 2026
+  languages:
+    java:
+      groupId: com.patbaumgartner
+      version: 17
+      multiProject: true
+
+release:
+  github:
+    overwrite: true
+    changelog:
+      formatted: ALWAYS
+      preset: conventional-commits
+
+signing:
+  active: ALWAYS
+  armored: true
+
+deploy:
+  maven:
+    mavenCentral:
+      sonatype:
+        active: ALWAYS
+        url: https://central.sonatype.com/api/v1/publisher
+        stagingRepositories:
+          - target/staging-deploy

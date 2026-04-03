@@ -5,7 +5,7 @@ plugins {
     id 'com.gradle.plugin-publish' version '2.1.1'
 }
 
-group = 'com.fortytwotalents'
+group = 'com.patbaumgartner'
 version = '1.0.0-SNAPSHOT'
 
 java {
@@ -22,7 +22,7 @@ repositories {
 
 dependencies {
     implementation gradleApi()
-    implementation 'com.fortytwotalents:autoconfiguration-optimizer-core:1.0.0-SNAPSHOT'
+    implementation 'com.patbaumgartner:autoconfiguration-optimizer-core:1.0.0-SNAPSHOT'
 
     testImplementation gradleTestKit()
     testImplementation platform('org.junit:junit-bom:6.0.3')
@@ -49,8 +49,8 @@ gradlePlugin {
     vcsUrl = 'https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer'
     plugins {
         autoconfigurationOptimizerPlugin {
-            id = 'com.fortytwotalents.autoconfiguration-optimizer'
-            implementationClass = 'com.fortytwotalents.optimizer.gradle.AutoConfigurationOptimizerPlugin'
+            id = 'com.patbaumgartner.autoconfiguration-optimizer'
+            implementationClass = 'com.patbaumgartner.optimizer.gradle.AutoConfigurationOptimizerPlugin'
             displayName = 'Spring Boot Autoconfiguration Optimizer'
             description = 'Analyzes and optimizes Spring Boot auto-configurations to improve startup time'
             tags.set(['spring-boot', 'autoconfiguration', 'optimization', 'startup-time'])
