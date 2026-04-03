@@ -25,11 +25,6 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
-          server-id: central
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
-          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
-          gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
       - name: Extract version from tag
         id: version
@@ -38,12 +33,27 @@ jobs:
       - name: Set Maven version
         run: mvn --batch-mode versions:set -DnewVersion=${{ steps.version.outputs.VERSION }} -DgenerateBackupPoms=false
 
-      - name: Build and Deploy to Maven Central
-        run: mvn --batch-mode --no-transfer-progress deploy -Prelease
+      - name: Stage artifacts to local directory
+        run: mvn --batch-mode --no-transfer-progress deploy -Ppublication
+
+      - name: Deploy to Maven Central via JReleaser
         env:
-          MAVEN_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          JRELEASER_MAVENCENTRAL_SONATYPE_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          JRELEASER_MAVENCENTRAL_SONATYPE_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mvn --batch-mode jreleaser:full-release -N
+
+      - name: JReleaser output
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: jreleaser-release
+          path: |
+            out/jreleaser/trace.log
+            out/jreleaser/output.properties
+          retention-days: 7
 
   release-gradle:
     name: Release Gradle Plugin
@@ -75,60 +85,3 @@ jobs:
         env:
           GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
           GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
-
-  create-github-release:
-    name: Create GitHub Release
-    runs-on: ubuntu-latest
-    needs: [ release-maven, release-gradle ]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Extract version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
-      - name: Generate Release Notes
-        id: release_notes
-        run: |
-          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -v "^${{ github.ref_name }}$" | head -1)
-          if [ -z "$PREVIOUS_TAG" ]; then
-            echo "NOTES=Initial release" >> $GITHUB_OUTPUT
-          else
-            NOTES=$(git log --pretty=format:"- %s" ${PREVIOUS_TAG}..HEAD)
-            echo "NOTES<<EOF" >> $GITHUB_OUTPUT
-            echo "$NOTES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: v${{ steps.version.outputs.VERSION }}
-          body: |
-            ## What's Changed
-            ${{ steps.release_notes.outputs.NOTES }}
-
-            ## Installation
-
-            ### Maven
-            ```xml
-            <dependency>
-                <groupId>com.fortytwotalents</groupId>
-                <artifactId>autoconfiguration-optimizer-core</artifactId>
-                <version>${{ steps.version.outputs.VERSION }}</version>
-            </dependency>
-            ```
-
-            ### Gradle
-            ```kotlin
-            plugins {
-                id("com.fortytwotalents.autoconfiguration-optimizer") version "${{ steps.version.outputs.VERSION }}"
-            }
-            ```
-          draft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

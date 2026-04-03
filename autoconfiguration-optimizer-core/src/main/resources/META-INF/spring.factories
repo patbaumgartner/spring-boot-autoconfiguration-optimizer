@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.AutoConfigurationImportFilter=\
-  com.fortytwotalents.optimizer.OptimizedAutoConfigurationImportFilter
+  com.patbaumgartner.optimizer.OptimizedAutoConfigurationImportFilter
