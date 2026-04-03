@@ -2,10 +2,10 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '4.0.3'
     id 'io.spring.dependency-management' version '1.1.7'
-    id 'com.fortytwotalents.autoconfiguration-optimizer' version '1.0.0-SNAPSHOT'
+    id 'com.patbaumgartner.autoconfiguration-optimizer' version '1.0.0-SNAPSHOT'
 }
 
-group = 'com.fortytwotalents'
+group = 'com.patbaumgartner'
 version = '1.0.0-SNAPSHOT'
 
 java {
