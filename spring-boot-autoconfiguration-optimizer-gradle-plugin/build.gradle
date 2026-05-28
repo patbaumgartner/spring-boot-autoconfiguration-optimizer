@@ -60,9 +60,43 @@ gradlePlugin {
 
 publishing {
     repositories {
+        mavenLocal()
         maven {
-            name = 'localPluginRepository'
-            url = layout.buildDirectory.dir('local-plugin-repository')
+            name = 'staging'
+            url = uri(layout.projectDirectory.dir('../target/staging-deploy'))
+        }
+        maven {
+            name = 'centralSnapshots'
+            url = uri('https://central.sonatype.com/repository/maven-snapshots/')
+            credentials {
+                username = System.getenv('CENTRAL_USERNAME') ?: ''
+                password = System.getenv('CENTRAL_PASSWORD') ?: ''
+            }
+        }
+    }
+    publications.withType(MavenPublication) {
+        pom {
+            name = 'Spring Boot Autoconfiguration Optimizer Gradle Plugin'
+            description = 'Analyzes and optimizes Spring Boot auto-configurations to improve startup time'
+            url = 'https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer'
+            licenses {
+                license {
+                    name = 'Apache License, Version 2.0'
+                    url = 'https://www.apache.org/licenses/LICENSE-2.0'
+                }
+            }
+            developers {
+                developer {
+                    id = 'patbaumgartner'
+                    name = 'Patrick Baumgartner'
+                    email = 'contact@patbaumgartner.com'
+                }
+            }
+            scm {
+                connection = 'scm:git:https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer.git'
+                developerConnection = 'scm:git:https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer.git'
+                url = 'https://github.com/patbaumgartner/spring-boot-autoconfiguration-optimizer'
+            }
         }
     }
 }
