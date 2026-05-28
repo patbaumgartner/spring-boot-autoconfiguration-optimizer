@@ -59,12 +59,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if gh release view "v${{ steps.version.outputs.VERSION }}" --repo ${{ github.repository }} > /dev/null 2>&1; then
-            echo "GitHub release v${{ steps.version.outputs.VERSION }} already exists — skipping JReleaser"
+            echo "GitHub release v${{ steps.version.outputs.VERSION }} already exists — running jreleaser:deploy only (Maven Central)"
+            mvn --batch-mode jreleaser:deploy -N
           else
             mvn --batch-mode jreleaser:full-release -N
           fi
 
       - name: Publish Gradle Plugin to Plugin Portal
+        continue-on-error: true
         working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin
         run: ./gradlew --no-daemon publishPlugins
         env:
