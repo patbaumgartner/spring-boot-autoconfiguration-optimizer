@@ -30,5 +30,7 @@ deploy:
       sonatype:
         active: ALWAYS
         url: https://central.sonatype.com/api/v1/publisher
+        connectTimeout: 20
+        readTimeout: 300
         stagingRepositories:
           - target/staging-deploy
