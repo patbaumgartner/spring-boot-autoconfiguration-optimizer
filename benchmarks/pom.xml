@@ -18,6 +18,7 @@
   <properties>
     <benchmark.skip>true</benchmark.skip>
     <jmh.version>1.37</jmh.version>
+    <maven.deploy.skip>true</maven.deploy.skip>
   </properties>
 
   <dependencies>

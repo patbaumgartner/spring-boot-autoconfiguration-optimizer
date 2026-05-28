@@ -69,15 +69,23 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: gradle
+          cache: maven
 
       - name: Extract version from tag
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Update Gradle plugin version
+      - name: Set Maven version
+        run: mvn --batch-mode versions:set -DnewVersion=${{ steps.version.outputs.VERSION }} -DgenerateBackupPoms=false
+
+      - name: Install Maven core to local repository
+        run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -N && mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl autoconfiguration-optimizer-core
+
+      - name: Update Gradle plugin version and core dependency version
         working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin
-        run: sed -i "s/version = '1.0.0-SNAPSHOT'/version = '${{ steps.version.outputs.VERSION }}'/" build.gradle
+        run: |
+          sed -i "s/^version = '.*'/version = '${{ steps.version.outputs.VERSION }}'/" build.gradle
+          sed -i "s/autoconfiguration-optimizer-core:[^']*'/autoconfiguration-optimizer-core:${{ steps.version.outputs.VERSION }}'/" build.gradle
 
       - name: Publish Gradle Plugin
         working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin
