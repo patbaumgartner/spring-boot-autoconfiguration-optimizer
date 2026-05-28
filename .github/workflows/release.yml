@@ -56,7 +56,13 @@ jobs:
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: mvn --batch-mode jreleaser:full-release -N
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "v${{ steps.version.outputs.VERSION }}" --repo ${{ github.repository }} > /dev/null 2>&1; then
+            echo "GitHub release v${{ steps.version.outputs.VERSION }} already exists — skipping JReleaser"
+          else
+            mvn --batch-mode jreleaser:full-release -N
+          fi
 
       - name: Publish Gradle Plugin to Plugin Portal
         working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin

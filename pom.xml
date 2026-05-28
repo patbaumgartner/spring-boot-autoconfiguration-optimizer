@@ -113,6 +113,9 @@
           <groupId>org.jreleaser</groupId>
           <artifactId>jreleaser-maven-plugin</artifactId>
           <version>${jreleaser-maven-plugin.version}</version>
+          <configuration>
+            <configFile>${project.basedir}/jreleaser.yml</configFile>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>io.spring.javaformat</groupId>
