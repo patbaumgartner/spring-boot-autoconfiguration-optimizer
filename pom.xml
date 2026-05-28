@@ -135,6 +135,10 @@
           <configuration>
             <updatePomFile>true</updatePomFile>
             <flattenMode>ossrh</flattenMode>
+            <pomElements>
+              <repositories>remove</repositories>
+              <pluginRepositories>remove</pluginRepositories>
+            </pomElements>
           </configuration>
           <executions>
             <execution>
