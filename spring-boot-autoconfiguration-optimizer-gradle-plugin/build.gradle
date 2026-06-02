@@ -22,7 +22,7 @@ repositories {
 
 dependencies {
     implementation gradleApi()
-    implementation 'com.patbaumgartner:autoconfiguration-optimizer-core:1.0.0-SNAPSHOT'
+    implementation 'com.patbaumgartner:autoconfiguration-optimizer-core:1.0.0'
 
     testImplementation gradleTestKit()
     testImplementation platform('org.junit:junit-bom:6.1.0')
