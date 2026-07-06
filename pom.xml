@@ -18,7 +18,7 @@
 
   <properties>
     <assertj.version>3.27.7</assertj.version>
-    <jreleaser-maven-plugin.version>1.24.0</jreleaser-maven-plugin.version>
+    <jreleaser-maven-plugin.version>1.25.0</jreleaser-maven-plugin.version>
     <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
     <sortpom-maven-plugin.version>4.0.0</sortpom-maven-plugin.version>
     <spring-javaformat-maven-plugin.version>0.0.47</spring-javaformat-maven-plugin.version>
