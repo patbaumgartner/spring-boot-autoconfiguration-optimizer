@@ -42,6 +42,7 @@
 
     <!-- Dependency versions -->
     <spring-boot.version>4.1.0</spring-boot.version>
+    <logback.version>1.5.35</logback.version>
   </properties>
 
   <dependencyManagement>
