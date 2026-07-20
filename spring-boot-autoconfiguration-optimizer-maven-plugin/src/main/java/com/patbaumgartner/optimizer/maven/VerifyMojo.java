@@ -22,9 +22,7 @@ import java.nio.file.Path;
  * <p>
  * Usage:
  *
- * <pre>{@code
- * mvn com.patbaumgartner:spring-boot-autoconfiguration-optimizer-maven-plugin:verify
- * }</pre>
+ * <pre>{@code mvn com.patbaumgartner:spring-boot-autoconfiguration-optimizer-maven-plugin:verify }</pre>
  */
 @Mojo(name = "verify", defaultPhase = LifecyclePhase.VERIFY, requiresProject = true, threadSafe = true)
 public class VerifyMojo extends AbstractMojo {

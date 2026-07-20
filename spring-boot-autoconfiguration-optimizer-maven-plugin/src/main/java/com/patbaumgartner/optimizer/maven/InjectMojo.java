@@ -29,15 +29,8 @@ import java.nio.file.Path;
  * handles providing the core at training time and making it available at package time.
  *
  * <p>
- * Example {@code pom.xml} configuration: <pre>{@code
- * <plugin>
- *     <groupId>com.patbaumgartner</groupId>
- *     <artifactId>spring-boot-autoconfiguration-optimizer-maven-plugin</artifactId>
- *     <version>1.0.0</version>
- *     <executions>
- *         <execution>
- *             <goals>
- *                 <goal>train</goal>
+ * Example {@code pom.xml} configuration:
+ * <pre>{@code <plugin> <groupId>com.patbaumgartner</groupId> <artifactId>spring-boot-autoconfiguration-optimizer-maven-plugin</artifactId> <version>1.0.0</version> <executions> <execution> <goals> <goal>train</goal>
  *                 <goal>inject</goal>
  *             </goals>
  *         </execution>
