@@ -34,10 +34,7 @@ import java.io.File;
  * <p>
  * Usage in {@code build.gradle}:
  * 
- * <pre>{@code
- * plugins {
- *     id 'com.patbaumgartner.autoconfiguration-optimizer' version '1.0.0'
- * }
+ * <pre>{@code plugins { id 'com.patbaumgartner.autoconfiguration-optimizer' version '1.0.0' }
  *
  * autoconfigurationOptimizer {
  *     mainClass = 'com.example.MyApplication'
