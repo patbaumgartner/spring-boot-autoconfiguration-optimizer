@@ -40,15 +40,7 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * Usage in {@code pom.xml}:
  *
- * <pre>{@code
- * <plugin>
- *     <groupId>com.patbaumgartner</groupId>
- *     <artifactId>spring-boot-autoconfiguration-optimizer-maven-plugin</artifactId>
- *     <version>1.0.0</version>
- *     <executions>
- *         <execution>
- *             <goals>
- *                 <goal>train</goal>
+ * <pre>{@code <plugin> <groupId>com.patbaumgartner</groupId> <artifactId>spring-boot-autoconfiguration-optimizer-maven-plugin</artifactId> <version>1.0.0</version> <executions> <execution> <goals> <goal>train</goal>
  *                 <goal>inject</goal>
  *             </goals>
  *         </execution>
@@ -59,9 +51,7 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * Or run from the command line:
  *
- * <pre>{@code
- * mvn com.patbaumgartner:spring-boot-autoconfiguration-optimizer-maven-plugin:train
- * }</pre>
+ * <pre>{@code mvn com.patbaumgartner:spring-boot-autoconfiguration-optimizer-maven-plugin:train }</pre>
  */
 @Mojo(name = "train", defaultPhase = LifecyclePhase.PROCESS_CLASSES,
 		requiresDependencyResolution = ResolutionScope.TEST, requiresProject = true, threadSafe = true)
