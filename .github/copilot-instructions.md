@@ -6,9 +6,9 @@
 
 ### How It Works
 
-1. **Training run**: The app starts once with `autoconfiguration.optimizer.training-run=true`. `TrainingRunApplicationListener` reads `ConditionEvaluationReport` and writes matched auto-configs to `META-INF/autoconfiguration-optimizer.properties`.
+1. **Training run**: The app starts once with `autoconfiguration.optimizer.training-run=true`. `TrainingRunApplicationListener` reads `ConditionEvaluationReport` and writes the auto-configs that did **not** apply to `META-INF/autoconfiguration-optimizer.properties`.
 2. **Inject**: The Maven/Gradle plugin embeds the optimizer core classes (including the filter and the training file) directly into the Spring Boot fat JAR via `CoreInjector`.
-3. **Production run**: `OptimizedAutoConfigurationImportFilter` reads the properties file and restricts Spring Boot's `AutoConfigurationImportSelector` to only import auto-configurations that were in the training set.
+3. **Production run**: `OptimizedAutoConfigurationImportFilter` reads the properties file and skips exactly the recorded auto-configurations. Anything not recorded is allowed.
 
 ---
 
@@ -16,7 +16,8 @@
 
 ```
 spring-boot-autoconfiguration-optimizer/
-├── autoconfiguration-optimizer-core/          # Core library (filter, listener, hints)
+├── autoconfiguration-optimizer-core/          # Core library (filter, listener, training file format)
+├── autoconfiguration-optimizer-build-support/ # Shared build-time code used by both plugins
 ├── spring-boot-autoconfiguration-optimizer-maven-plugin/  # Maven plugin (train + inject goals)
 ├── spring-boot-autoconfiguration-optimizer-gradle-plugin/ # Gradle plugin (trainOptimizer + injectOptimizerCore tasks)
 ├── integration-tests/
@@ -36,10 +37,12 @@ spring-boot-autoconfiguration-optimizer/
 | `OptimizedAutoConfigurationImportFilter` | core | Reads training file, filters auto-config candidates at import time |
 | `TrainingRunApplicationListener` | core | Captures matched auto-configs during training run and writes properties file |
 | `AutoConfigurationOptimizerProperties` | core | `@ConfigurationProperties(prefix="autoconfiguration.optimizer")` |
-| `CoreInjector` | maven + gradle | Finds the core JAR via `ProtectionDomain`, extracts and merges it into the build output |
+| `TrainingFile` | core | On-disk format contract: keys, format version, candidate digest |
+| `CoreInjector` | build-support | Finds the core JAR via `ProtectionDomain`, extracts and merges it into the build output |
 | `TrainMojo` / `TrainTask` | maven / gradle | Forks a training run JVM process |
 | `InjectMojo` / `InjectTask` | maven / gradle | Invokes `CoreInjector` to embed the core into the classes directory |
-| `MainClassFinder` | maven + gradle | Scans bytecode for `@SpringBootApplication` to auto-detect the main class |
+| `MainClassFinder` | build-support | Scans bytecode for `@SpringBootApplication` to auto-detect the main class |
+| `AutoConfigurationCandidates` | build-support | Reads candidates off a classpath without starting an app (used by `verify`) |
 | `AutoConfigurationOptimizerPlugin` | gradle | Gradle plugin entry point; wires tasks to `bootJar`, `bootWar`, `resolveMainClassName` |
 
 ---
@@ -103,13 +106,24 @@ The optimizer uses `AutoConfigurationImportFilter` registered in `META-INF/sprin
 
 `META-INF/spring.factories` cannot be removed. Spring Boot 4's `AutoConfigurationImportSelector.getAutoConfigurationImportFilters()` uses `SpringFactoriesLoader.loadFactories()` to discover `AutoConfigurationImportFilter` implementations. There is no alternative registration mechanism for this interface.
 
-### Filter must distinguish registered candidates from programmatic imports
+### The training file records exclusions, not inclusions
 
-In Spring Boot 4, `AutoConfigurationImportFilter.match()` is called not only for top-level `AutoConfiguration.imports` candidates but also for programmatic `@Import`-ed inner configurations (e.g., `DataSourceConfiguration$Hikari`). The filter must use `ImportCandidates.load(AutoConfiguration.class, classLoader)` to build a set of registered candidates and **only filter entries that appear in that set**. Inner configurations not in the set must always be allowed through (return `true`).
+This is the load-bearing decision. Recording the loaded set made every candidate absent from the file get skipped, so adding a dependency without re-training silently removed its beans from the application. Recording exclusions means an unknown candidate is allowed, so the failure mode is "not optimized yet" rather than "silently broken".
 
-### Training run detection covers both class-level and method-level keys
+Two consequences follow, and both must be preserved:
 
-`ConditionEvaluationReport` entries can appear as either `ClassName` keys (class-level conditions) or `ClassName#methodName` keys (method-level conditions, e.g., `@Bean` methods). `TrainingRunApplicationListener.detectLoadedAutoConfigurations()` must check both forms to capture auto-configs like `EndpointAutoConfiguration` that only have method-level conditions.
+- The filter must **not** call `ImportCandidates.load(...)` at runtime. It no longer needs the full candidate set, which is what keeps the classpath from being re-read during startup. Programmatic `@Import`-ed inner configurations (e.g. `DataSourceConfiguration$Hikari`) pass simply because they were never recorded as excluded.
+- The file carries `autoconfiguration.optimizer.format-version`. The filter must refuse any version it does not recognise and fall back to allowing everything; a v1 file read as an exclusion list would skip exactly the auto-configurations the application uses.
+
+### Detecting what loaded uses `getUnconditionalClasses()`
+
+An auto-configuration counts as loaded when its class-level conditions fully matched, **or** when it appears in `ConditionEvaluationReport.getUnconditionalClasses()` - the candidates that survived Spring Boot's own import filters without any class-level condition being evaluated. Do not reintroduce the older heuristic of deriving class names from `ClassName#methodName` report keys: it misses unconditional auto-configurations that declare no conditional `@Bean` method.
+
+Candidates rejected by Spring Boot's own filters appear in neither collection and are correctly treated as unused.
+
+### Staleness is checked at build time, not startup
+
+The training file records a SHA-256 digest of the candidate class names. `VerifyMojo` recomputes it from the project's runtime classpath and fails on a mismatch. This deliberately stays out of the startup path. It only detects **classpath** drift - conditions can change outcome without any candidate name changing - so the docs must keep saying that re-training is required after dependency or configuration changes.
 
 ### Gradle task annotations (Gradle 9)
 
@@ -120,6 +134,14 @@ Gradle 9 `validatePlugins` requires:
 ### Core injection mechanism
 
 `CoreInjector` locates the core JAR via `OptimizedAutoConfigurationImportFilter.class.getProtectionDomain().getCodeSource().getLocation()`, then extracts all `.class` files and resource files into the project build output directory, carefully merging `spring.factories` and `AutoConfiguration.imports` rather than overwriting them.
+
+Rules that exist because breaking them caused real defects:
+
+- Entries under `com/patbaumgartner/optimizer/` are **owned** by the plugin and must be overwritten, or upgrading the plugin leaves classes from the previous core version in the build output. Everything else must never clobber a file the application produced.
+- `META-INF/maven/**` must be skipped, or the consumer's artifact reports itself as `autoconfiguration-optimizer-core` to anything reading Maven provenance.
+- Never write merged `spring.factories` with `Properties.store`: it escapes the backslash of an embedded line continuation, and the value is read back as a class name starting with a literal backslash.
+
+Because the plugins copy the core's classes **without its dependencies**, `autoconfiguration-optimizer-core` may only depend on artifacts every Spring Boot application already has. A `maven-enforcer-plugin` rule in that module enforces this.
 
 ### Gradle plugin task wiring
 
@@ -193,6 +215,6 @@ Before opening a PR, ensure:
 
 1. `mvn verify` passes for all Maven modules in the root reactor.
 2. Gradle plugin tests pass (`./gradlew --no-daemon test` from `spring-boot-autoconfiguration-optimizer-gradle-plugin/`).
-3. Spring Java Format applied (`mvn io.spring.javaformat:spring-javaformat-maven-plugin:apply`).
+3. Spring Java Format applied (`mvn spring-javaformat:apply`). `validate` and `sortpom:verify` are bound to the `validate` phase, so an unformatted file or unsorted POM fails the build.
 4. Javadoc present for any new public API.
 5. PR description includes type of change, testing done, and related issues.

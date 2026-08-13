@@ -21,7 +21,12 @@ Thank you for your interest in contributing! Here's how to get started.
    ```
 
 4. **Build the Gradle plugin**
+
+   The Gradle plugin resolves the core and build-support artifacts from your local Maven
+   repository, so install them first:
    ```bash
+   mvn install -DskipTests -N
+   mvn install -DskipTests -pl autoconfiguration-optimizer-core,autoconfiguration-optimizer-build-support
    cd spring-boot-autoconfiguration-optimizer-gradle-plugin
    ./gradlew build
    ```
@@ -30,6 +35,13 @@ Thank you for your interest in contributing! Here's how to get started.
 
 - **Maven tests**: `mvn test`
 - **Gradle plugin tests**: `cd spring-boot-autoconfiguration-optimizer-gradle-plugin && ./gradlew test`
+- **End-to-end**: the sample applications under `integration-tests/` are not part of the root
+  reactor and must be run separately. They exercise the full train → inject → package cycle and
+  then drive the packaged application over HTTP:
+  ```bash
+  mvn install -DskipTests -pl spring-boot-autoconfiguration-optimizer-maven-plugin -am
+  mvn verify -f integration-tests/petclinic-sample/pom.xml
+  ```
 
 ## Pull Request Process
 
@@ -41,8 +53,15 @@ Thank you for your interest in contributing! Here's how to get started.
 
 ## Code Style
 
-- Follow standard Java conventions
-- Use 4-space indentation
+Formatting is enforced by the build, not by review: `spring-javaformat:validate` and
+`sortpom:verify` are bound to the `validate` phase, so `mvn verify` fails on an unformatted
+source file or an unsorted POM.
+
+```bash
+mvn spring-javaformat:apply
+mvn sortpom:sort
+```
+
 - Add Javadoc for public APIs
 - Keep methods focused and concise
 
