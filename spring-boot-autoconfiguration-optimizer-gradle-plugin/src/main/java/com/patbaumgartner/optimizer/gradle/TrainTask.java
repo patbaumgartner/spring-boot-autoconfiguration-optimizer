@@ -149,14 +149,13 @@ public abstract class TrainTask extends DefaultTask {
 
         Process process = new ProcessBuilder(command)
                 .directory(workDir.toFile())
-                .redirectErrorStream(true)
                 .inheritIO()
                 .start();
 
         int timeoutSeconds = getTimeoutSeconds().get();
         boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
         if (!finished) {
-            process.destroyForcibly();
+            terminate(process);
             throw new GradleException("Training run timed out after " + timeoutSeconds + " seconds. "
                     + "Consider increasing the timeout or setting exitAfterTraining=true.");
         }
@@ -177,6 +176,16 @@ public abstract class TrainTask extends DefaultTask {
         // Inject core classes into the main output so the optimizer works at runtime
         // without requiring the core as a project dependency
         injectCoreFiles();
+    }
+
+    /**
+     * Kills the training JVM and anything it spawned. Destroying only the direct
+     * child leaves grandchildren holding the ports the training run bound.
+     */
+    private static void terminate(Process process) throws InterruptedException {
+        process.descendants().forEach(ProcessHandle::destroyForcibly);
+        process.destroyForcibly();
+        process.waitFor(10, TimeUnit.SECONDS);
     }
 
     private void injectCoreFiles() {
