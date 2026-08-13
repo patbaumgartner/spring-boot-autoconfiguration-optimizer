@@ -3,6 +3,7 @@ package com.patbaumgartner.optimizer.gradle;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskProvider;
 
@@ -99,40 +100,18 @@ public class AutoConfigurationOptimizerPlugin implements Plugin<Project> {
             }));
         });
 
-        // Register a copy task that copies the generated file to the target directory.
-        // This task depends on the training task so training always runs first.
-        TaskProvider<?> copyTask = project.getTasks().register("copyAutoconfigurationOptimizerFile", task -> {
-            task.setGroup(TASK_GROUP);
-            task.setDescription(
-                    "Copies the generated autoconfiguration optimizer properties file to the build output directory.");
-            task.dependsOn(trainTask);
-            task.doLast(t -> {
-                File sourceFile = project.getLayout().getBuildDirectory()
-                        .dir("autoconfiguration-optimizer")
-                        .get()
-                        .file(extension.getOutputFile().get())
-                        .getAsFile();
-
-                if (!sourceFile.exists()) {
-                    throw new org.gradle.api.GradleException(
-                            "Training output file not found: " + sourceFile.getAbsolutePath());
-                }
-
-                File targetDir = extension.getTargetDirectory().get().getAsFile();
-                targetDir.mkdirs();
-                File targetFile = new File(targetDir, extension.getOutputFile().get());
-
-                try {
-                    java.nio.file.Files.copy(
-                            sourceFile.toPath(),
-                            targetFile.toPath(),
-                            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                    t.getLogger().lifecycle("Copied optimizer properties to: {}", targetFile.getAbsolutePath());
-                } catch (java.io.IOException e) {
-                    throw new org.gradle.api.GradleException("Failed to copy optimizer properties file", e);
-                }
-            });
-        });
+        // A built-in Copy task rather than a doLast block: an ad-hoc task that reaches
+        // back to the Project at execution time cannot be serialized into Gradle's
+        // configuration cache, which is enabled by default from Gradle 9.
+        TaskProvider<Copy> copyTask = project.getTasks().register("copyAutoconfigurationOptimizerFile", Copy.class,
+                task -> {
+                    task.setGroup(TASK_GROUP);
+                    task.setDescription(
+                            "Copies the generated autoconfiguration optimizer properties file to the build output directory.");
+                    task.from(trainTask.flatMap(
+                            train -> train.getOutputDirectory().file(train.getOutputFile())));
+                    task.into(extension.getTargetDirectory());
+                });
 
         // If the Java plugin is applied, automatically configure classesDirectories
         // so the main class can be auto-detected without any additional configuration,
