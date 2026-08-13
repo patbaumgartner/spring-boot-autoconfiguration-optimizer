@@ -103,7 +103,7 @@ class AutoConfigurationOptimizerPluginTest {
         Files.writeString(projectDir.resolve("build.gradle"), """
                 plugins {
                     id 'java'
-                    id 'org.springframework.boot' version '4.0.3'
+                    id 'org.springframework.boot' version '4.1.0'
                     id 'com.patbaumgartner.autoconfiguration-optimizer'
                 }
                 repositories {
