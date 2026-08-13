@@ -66,9 +66,13 @@ jobs:
           cat benchmarks/results/training/autoconfiguration-optimizer.properties
 
           # Export stats to the environment for later steps
-          TRAINING_AVAILABLE=$(grep -oP '(?<=# Total available auto-configurations: )\d+' benchmarks/results/training/autoconfiguration-optimizer.properties || echo "")
-          TRAINING_LOADED=$(grep -oP '(?<=# Auto-configurations loaded during training: )\d+' benchmarks/results/training/autoconfiguration-optimizer.properties || echo "")
-          TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations to skip at startup: )\d+' benchmarks/results/training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_AVAILABLE=$(grep -oP '(?<=# Auto-configuration candidates at training time: )\d+' benchmarks/results/training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_LOADED=$(grep -oP '(?<=# Loaded during training: )\d+' benchmarks/results/training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_EXCLUDED=$(grep -oP '(?<=# Excluded on subsequent starts: )\d+' benchmarks/results/training/autoconfiguration-optimizer.properties || echo "")
+          if [ -z "${TRAINING_AVAILABLE}" ] || [ -z "${TRAINING_LOADED}" ] || [ -z "${TRAINING_EXCLUDED}" ]; then
+            echo "::error::Could not parse the training summary. The training file format changed without this workflow being updated."
+            exit 1
+          fi
           echo "training_available=${TRAINING_AVAILABLE}" >> $GITHUB_OUTPUT
           echo "training_loaded=${TRAINING_LOADED}" >> $GITHUB_OUTPUT
           echo "training_excluded=${TRAINING_EXCLUDED}" >> $GITHUB_OUTPUT
@@ -328,9 +332,13 @@ jobs:
           cat benchmarks/results-gradle/training/autoconfiguration-optimizer.properties
 
           # Export stats to the environment for later steps
-          TRAINING_AVAILABLE=$(grep -oP '(?<=# Total available auto-configurations: )\d+' benchmarks/results-gradle/training/autoconfiguration-optimizer.properties || echo "")
-          TRAINING_LOADED=$(grep -oP '(?<=# Auto-configurations loaded during training: )\d+' benchmarks/results-gradle/training/autoconfiguration-optimizer.properties || echo "")
-          TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations to skip at startup: )\d+' benchmarks/results-gradle/training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_AVAILABLE=$(grep -oP '(?<=# Auto-configuration candidates at training time: )\d+' benchmarks/results-gradle/training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_LOADED=$(grep -oP '(?<=# Loaded during training: )\d+' benchmarks/results-gradle/training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_EXCLUDED=$(grep -oP '(?<=# Excluded on subsequent starts: )\d+' benchmarks/results-gradle/training/autoconfiguration-optimizer.properties || echo "")
+          if [ -z "${TRAINING_AVAILABLE}" ] || [ -z "${TRAINING_LOADED}" ] || [ -z "${TRAINING_EXCLUDED}" ]; then
+            echo "::error::Could not parse the training summary. The training file format changed without this workflow being updated."
+            exit 1
+          fi
           echo "training_available=${TRAINING_AVAILABLE}" >> $GITHUB_OUTPUT
           echo "training_loaded=${TRAINING_LOADED}" >> $GITHUB_OUTPUT
           echo "training_excluded=${TRAINING_EXCLUDED}" >> $GITHUB_OUTPUT
