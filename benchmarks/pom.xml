@@ -62,6 +62,10 @@
             <phase>package</phase>
             <configuration>
               <finalName>benchmarks</finalName>
+              <!-- The shaded uber-JAR is never consumed as a dependency, so the
+                   rewritten POM it would otherwise leave in the module root is
+                   pure build noise. -->
+              <createDependencyReducedPom>false</createDependencyReducedPom>
               <filters>
                 <filter>
                   <artifact>*:*</artifact>

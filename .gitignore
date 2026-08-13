@@ -39,8 +39,5 @@ out/
 
 ### Maven ###
 target/
+.flattened-pom.xml
 *.bak
-
-### Other files to ignore ###
-benchmarks/dependency-reduced-pom.xml
-autoconfiguration-optimizer-core/autoconfiguration-optimizer.properties
