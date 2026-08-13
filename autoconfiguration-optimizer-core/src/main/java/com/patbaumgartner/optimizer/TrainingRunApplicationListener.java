@@ -66,7 +66,10 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 		try {
 			Set<String> candidates = loadAutoConfigurationCandidates();
 			Set<String> loaded = detectLoadedAutoConfigurations(candidates);
-			List<String> excluded = candidates.stream().filter((candidate) -> !loaded.contains(candidate)).sorted().toList();
+			List<String> excluded = candidates.stream()
+				.filter((candidate) -> !loaded.contains(candidate))
+				.sorted()
+				.toList();
 
 			writeTrainingFile(excluded, candidates);
 

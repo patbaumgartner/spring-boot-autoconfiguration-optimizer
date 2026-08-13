@@ -202,9 +202,13 @@ jobs:
           echo "Training properties:"
           cat /tmp/benchmark-training/autoconfiguration-optimizer.properties
 
-          TRAINING_AVAILABLE=$(grep -oP '(?<=# Total available auto-configurations: )\d+' /tmp/benchmark-training/autoconfiguration-optimizer.properties || echo "")
-          TRAINING_LOADED=$(grep -oP '(?<=# Total auto-configurations loaded: )\d+' /tmp/benchmark-training/autoconfiguration-optimizer.properties || echo "")
-          TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations excluded: )\d+' /tmp/benchmark-training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_AVAILABLE=$(grep -oP '(?<=# Auto-configuration candidates at training time: )\d+' /tmp/benchmark-training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_LOADED=$(grep -oP '(?<=# Loaded during training: )\d+' /tmp/benchmark-training/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_EXCLUDED=$(grep -oP '(?<=# Excluded on subsequent starts: )\d+' /tmp/benchmark-training/autoconfiguration-optimizer.properties || echo "")
+          if [ -z "${TRAINING_AVAILABLE}" ] || [ -z "${TRAINING_LOADED}" ] || [ -z "${TRAINING_EXCLUDED}" ]; then
+            echo "::error::Could not parse the training summary. The training file format changed without this workflow being updated."
+            exit 1
+          fi
           echo "training_available=${TRAINING_AVAILABLE}" >> $GITHUB_OUTPUT
           echo "training_loaded=${TRAINING_LOADED}" >> $GITHUB_OUTPUT
           echo "training_excluded=${TRAINING_EXCLUDED}" >> $GITHUB_OUTPUT
@@ -382,9 +386,13 @@ jobs:
           echo "Training properties:"
           cat /tmp/benchmark-training-gradle/autoconfiguration-optimizer.properties
 
-          TRAINING_AVAILABLE=$(grep -oP '(?<=# Total available auto-configurations: )\d+' /tmp/benchmark-training-gradle/autoconfiguration-optimizer.properties || echo "")
-          TRAINING_LOADED=$(grep -oP '(?<=# Total auto-configurations loaded: )\d+' /tmp/benchmark-training-gradle/autoconfiguration-optimizer.properties || echo "")
-          TRAINING_EXCLUDED=$(grep -oP '(?<=# Auto-configurations excluded: )\d+' /tmp/benchmark-training-gradle/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_AVAILABLE=$(grep -oP '(?<=# Auto-configuration candidates at training time: )\d+' /tmp/benchmark-training-gradle/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_LOADED=$(grep -oP '(?<=# Loaded during training: )\d+' /tmp/benchmark-training-gradle/autoconfiguration-optimizer.properties || echo "")
+          TRAINING_EXCLUDED=$(grep -oP '(?<=# Excluded on subsequent starts: )\d+' /tmp/benchmark-training-gradle/autoconfiguration-optimizer.properties || echo "")
+          if [ -z "${TRAINING_AVAILABLE}" ] || [ -z "${TRAINING_LOADED}" ] || [ -z "${TRAINING_EXCLUDED}" ]; then
+            echo "::error::Could not parse the training summary. The training file format changed without this workflow being updated."
+            exit 1
+          fi
           echo "training_available=${TRAINING_AVAILABLE}" >> $GITHUB_OUTPUT
           echo "training_loaded=${TRAINING_LOADED}" >> $GITHUB_OUTPUT
           echo "training_excluded=${TRAINING_EXCLUDED}" >> $GITHUB_OUTPUT
@@ -519,5 +527,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Run Maven Checkstyle
-        run: mvn --batch-mode --no-transfer-progress checkstyle:check -Dcheckstyle.failOnViolation=false || true
+      # spring-javaformat:validate and sortpom:verify are bound to the validate phase,
+      # so this fails on unformatted Java or an unsorted POM in any reactor module.
+      - name: Verify formatting and POM order
+        run: mvn --batch-mode --no-transfer-progress validate
+
+      - name: Verify Gradle plugin formatting
+        working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin
+        run: ./gradlew --no-daemon validatePlugins

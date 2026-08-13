@@ -116,8 +116,8 @@ class OptimizedAutoConfigurationImportFilterTest {
 	 */
 	@Test
 	void ignoresATrainingFileWithAnUnknownFormatVersion() throws Exception {
-		Path root = classpathRootWith("newer", TrainingFile.FORMAT_VERSION_KEY + "="
-				+ (TrainingFile.FORMAT_VERSION + 1) + "\n" + TrainingFile.EXCLUDED_CONFIGURATIONS_KEY + "=" + BAR);
+		Path root = classpathRootWith("newer", TrainingFile.FORMAT_VERSION_KEY + "=" + (TrainingFile.FORMAT_VERSION + 1)
+				+ "\n" + TrainingFile.EXCLUDED_CONFIGURATIONS_KEY + "=" + BAR);
 		OptimizedAutoConfigurationImportFilter filter = filterUsing(root);
 
 		assertThat(filter.getExcludedConfigurations()).isNull();
@@ -131,8 +131,7 @@ class OptimizedAutoConfigurationImportFilterTest {
 	 */
 	@Test
 	void ignoresALegacyTrainingFileThatRecordedLoadedConfigurations() throws Exception {
-		Path root = classpathRootWith("legacy",
-				"autoconfiguration.optimizer.loaded-configurations=" + FOO + "," + BAR);
+		Path root = classpathRootWith("legacy", "autoconfiguration.optimizer.loaded-configurations=" + FOO + "," + BAR);
 		OptimizedAutoConfigurationImportFilter filter = filterUsing(root);
 
 		assertThat(filter.getExcludedConfigurations()).isNull();

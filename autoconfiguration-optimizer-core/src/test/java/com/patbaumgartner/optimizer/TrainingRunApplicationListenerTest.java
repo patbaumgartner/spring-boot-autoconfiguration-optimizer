@@ -91,8 +91,7 @@ class TrainingRunApplicationListenerTest {
 		Properties written = read("training.properties");
 		assertThat(written.getProperty(TrainingFile.FORMAT_VERSION_KEY))
 			.isEqualTo(String.valueOf(TrainingFile.FORMAT_VERSION));
-		assertThat(written.getProperty(TrainingFile.EXCLUDED_CONFIGURATIONS_KEY).split(","))
-			.extracting(String::trim)
+		assertThat(written.getProperty(TrainingFile.EXCLUDED_CONFIGURATIONS_KEY).split(",")).extracting(String::trim)
 			.containsExactlyInAnyOrder(NOT_MATCHED, NEVER_EVALUATED);
 		assertThat(written.getProperty(TrainingFile.CANDIDATE_COUNT_KEY)).isEqualTo("3");
 		assertThat(written.getProperty(TrainingFile.CANDIDATE_DIGEST_KEY))
@@ -152,8 +151,7 @@ class TrainingRunApplicationListenerTest {
 	void rejectsAnOutputFileNameContainingDirectoryComponents() {
 		TrainingRunApplicationListener listener = listener(report(Map.of(), Set.of()), "../escaped.properties");
 
-		assertThatIllegalArgumentException()
-			.isThrownBy(() -> listener.writeTrainingFile(List.of(), Set.of(LOADED)))
+		assertThatIllegalArgumentException().isThrownBy(() -> listener.writeTrainingFile(List.of(), Set.of(LOADED)))
 			.withMessageContaining("simple filename");
 	}
 

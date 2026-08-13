@@ -162,8 +162,10 @@ public class OptimizedAutoConfigurationImportFilter
 		if (resources.size() > 1) {
 			// Picking one arbitrarily would apply one application's exclusions to
 			// another, so refuse to optimize rather than guess.
-			log.warn("Spring Boot Autoconfiguration Optimizer: Found {} training files on the classpath ({}). "
-					+ "Exactly one is required; running with all auto-configurations.", resources.size(), resources);
+			log.warn(
+					"Spring Boot Autoconfiguration Optimizer: Found {} training files on the classpath ({}). "
+							+ "Exactly one is required; running with all auto-configurations.",
+					resources.size(), resources);
 			return null;
 		}
 
@@ -180,11 +182,9 @@ public class OptimizedAutoConfigurationImportFilter
 
 		String formatVersion = properties.getProperty(TrainingFile.FORMAT_VERSION_KEY);
 		if (!String.valueOf(TrainingFile.FORMAT_VERSION).equals(formatVersion)) {
-			log.warn(
-					"Spring Boot Autoconfiguration Optimizer: Training file {} declares format version {} but this "
-							+ "optimizer requires version {}. Re-run the training goal; running with all "
-							+ "auto-configurations.",
-					resource, formatVersion, TrainingFile.FORMAT_VERSION);
+			log.warn("Spring Boot Autoconfiguration Optimizer: Training file {} declares format version {} but this "
+					+ "optimizer requires version {}. Re-run the training goal; running with all "
+					+ "auto-configurations.", resource, formatVersion, TrainingFile.FORMAT_VERSION);
 			return null;
 		}
 

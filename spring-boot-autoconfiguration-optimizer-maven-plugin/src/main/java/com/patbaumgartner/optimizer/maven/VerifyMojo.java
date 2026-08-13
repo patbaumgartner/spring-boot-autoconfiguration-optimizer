@@ -90,10 +90,10 @@ public class VerifyMojo extends AbstractMojo {
 
 		String formatVersion = properties.getProperty(TrainingFile.FORMAT_VERSION_KEY);
 		if (!String.valueOf(TrainingFile.FORMAT_VERSION).equals(formatVersion)) {
-			throw new MojoFailureException("Spring Boot Autoconfiguration Optimizer: Training file "
-					+ trainingFilePath.toAbsolutePath() + " declares format version " + formatVersion
-					+ " but this plugin produces version " + TrainingFile.FORMAT_VERSION
-					+ ". Re-run 'mvn autoconfiguration-optimizer:train'.");
+			throw new MojoFailureException(
+					"Spring Boot Autoconfiguration Optimizer: Training file " + trainingFilePath.toAbsolutePath()
+							+ " declares format version " + formatVersion + " but this plugin produces version "
+							+ TrainingFile.FORMAT_VERSION + ". Re-run 'mvn autoconfiguration-optimizer:train'.");
 		}
 
 		Set<String> candidates = scanCandidates();

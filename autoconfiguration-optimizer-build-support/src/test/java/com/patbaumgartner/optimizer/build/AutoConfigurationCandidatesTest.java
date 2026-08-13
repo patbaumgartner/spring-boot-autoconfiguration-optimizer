@@ -23,10 +23,11 @@ class AutoConfigurationCandidatesTest {
 
 	@Test
 	void readsCandidatesFromADirectory() throws Exception {
-		Path classes = directoryWithImports("classes", "com.example.AAutoConfiguration\ncom.example.BAutoConfiguration\n");
+		Path classes = directoryWithImports("classes",
+				"com.example.AAutoConfiguration\ncom.example.BAutoConfiguration\n");
 
-		assertThat(AutoConfigurationCandidates.scan(List.of(classes)))
-			.containsExactly("com.example.AAutoConfiguration", "com.example.BAutoConfiguration");
+		assertThat(AutoConfigurationCandidates.scan(List.of(classes))).containsExactly("com.example.AAutoConfiguration",
+				"com.example.BAutoConfiguration");
 	}
 
 	@Test

@@ -143,11 +143,34 @@
           <groupId>io.spring.javaformat</groupId>
           <artifactId>spring-javaformat-maven-plugin</artifactId>
           <version>${spring-javaformat-maven-plugin.version}</version>
+          <executions>
+            <execution>
+              <id>validate-formatting</id>
+              <goals>
+                <goal>validate</goal>
+              </goals>
+              <phase>validate</phase>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <groupId>com.github.ekryd.sortpom</groupId>
           <artifactId>sortpom-maven-plugin</artifactId>
           <version>${sortpom-maven-plugin.version}</version>
+          <configuration>
+            <predefinedSortOrder>custom_1</predefinedSortOrder>
+            <createBackupFile>false</createBackupFile>
+            <verifyFail>Stop</verifyFail>
+          </configuration>
+          <executions>
+            <execution>
+              <id>verify-pom-order</id>
+              <goals>
+                <goal>verify</goal>
+              </goals>
+              <phase>validate</phase>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -201,6 +224,14 @@
       </plugins>
     </pluginManagement>
     <plugins>
+      <plugin>
+        <groupId>io.spring.javaformat</groupId>
+        <artifactId>spring-javaformat-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>com.github.ekryd.sortpom</groupId>
+        <artifactId>sortpom-maven-plugin</artifactId>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
