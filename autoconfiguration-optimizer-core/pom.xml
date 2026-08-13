@@ -14,12 +14,12 @@
   <description>Core library for Spring Boot auto-configuration optimization</description>
 
   <dependencies>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-core</artifactId>
-      <version>${logback.version}</version>
-    </dependency>
-
+    <!--
+      The core is embedded into consumer applications by the build plugins, which copy
+      only this artifact's own classes - never its dependencies. Every compile-scope
+      dependency declared here must therefore already be present in any Spring Boot
+      application. Keep this list minimal; see the enforcer rule below.
+    -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-autoconfigure</artifactId>
@@ -48,6 +48,45 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>enforce-embeddable-core</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <!--
+                    The build plugins embed this artifact by copying its classes into the
+                    consumer's build output; its dependencies are NOT carried along. Any
+                    compile/runtime dependency added here must therefore already be on the
+                    classpath of every Spring Boot application, otherwise embedded core
+                    classes fail with NoClassDefFoundError at the consumer's startup.
+                  -->
+                  <message>autoconfiguration-optimizer-core must only depend on artifacts that every Spring Boot application already has on its classpath, because the build plugins embed its classes without its dependencies.</message>
+                  <searchTransitive>true</searchTransitive>
+                  <excludes>
+                    <exclude>*:*:*:jar:compile</exclude>
+                    <exclude>*:*:*:jar:runtime</exclude>
+                  </excludes>
+                  <includes>
+                    <include>org.springframework:*</include>
+                    <include>org.springframework.boot:*</include>
+                    <include>org.slf4j:slf4j-api</include>
+                    <include>io.micrometer:*</include>
+                    <include>org.jspecify:jspecify</include>
+                    <include>commons-logging:commons-logging</include>
+                  </includes>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
