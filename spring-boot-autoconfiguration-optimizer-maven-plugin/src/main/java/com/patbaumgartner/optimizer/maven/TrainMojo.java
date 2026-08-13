@@ -1,6 +1,6 @@
 package com.patbaumgartner.optimizer.maven;
 
-import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
 import com.patbaumgartner.optimizer.build.CoreInjector;
 import com.patbaumgartner.optimizer.build.MainClassFinder;
 import org.apache.maven.plugin.AbstractMojo;
@@ -125,6 +125,10 @@ public class TrainMojo extends AbstractMojo {
 			getLog().info("Spring Boot Autoconfiguration Optimizer: Training run skipped.");
 			return;
 		}
+		if ("pom".equals(project.getPackaging())) {
+			getLog().debug("Spring Boot Autoconfiguration Optimizer: Skipping training run for pom packaging.");
+			return;
+		}
 
 		getLog().info("Spring Boot Autoconfiguration Optimizer: Starting training run...");
 
@@ -149,14 +153,11 @@ public class TrainMojo extends AbstractMojo {
 		getLog().debug("Training run command: " + String.join(" ", command));
 
 		try {
-			Process process = new ProcessBuilder(command).directory(workingDirectory)
-				.redirectErrorStream(true)
-				.inheritIO()
-				.start();
+			Process process = new ProcessBuilder(command).directory(workingDirectory).inheritIO().start();
 
 			boolean finished = process.waitFor(timeout, TimeUnit.SECONDS);
 			if (!finished) {
-				process.destroyForcibly();
+				terminate(process);
 				throw new MojoExecutionException("Training run timed out after " + timeout + " seconds. "
 						+ "Consider increasing the timeout or setting exitAfterTraining=true.");
 			}
@@ -193,6 +194,17 @@ public class TrainMojo extends AbstractMojo {
 		}
 	}
 
+	/**
+	 * Kills the training JVM and anything it spawned. Destroying only the direct child
+	 * leaves grandchildren holding the build's console and, on CI, the ports the training
+	 * run bound.
+	 */
+	private static void terminate(Process process) throws InterruptedException {
+		process.descendants().forEach(ProcessHandle::destroyForcibly);
+		process.destroyForcibly();
+		process.waitFor(10, TimeUnit.SECONDS);
+	}
+
 	private List<String> buildCommand(Path outputFilePath) throws MojoExecutionException {
 		List<String> command = new ArrayList<>();
 
@@ -226,25 +238,23 @@ public class TrainMojo extends AbstractMojo {
 		return command;
 	}
 
-	private String buildClasspath() {
+	private String buildClasspath() throws MojoExecutionException {
 		List<String> classpathEntries = new ArrayList<>();
 
-		// Add compiled classes
-		classpathEntries.add(project.getBuild().getOutputDirectory());
+		// The same classpath the verify goal scans for candidates, so training and
+		// verification can never disagree about what is on it.
+		try {
+			classpathEntries.addAll(project.getRuntimeClasspathElements());
+		}
+		catch (DependencyResolutionRequiredException ex) {
+			throw new MojoExecutionException("Failed to resolve the project's runtime classpath", ex);
+		}
 
 		// Always include the optimizer core JAR so training works without the user
 		// declaring it as a project dependency
 		Path coreJar = CoreInjector.findCoreJar();
-		if (coreJar != null) {
+		if (coreJar != null && !classpathEntries.contains(coreJar.toString())) {
 			classpathEntries.add(coreJar.toString());
-		}
-
-		// Add all compile and runtime dependencies
-		for (Artifact artifact : project.getArtifacts()) {
-			if (artifact.getFile() != null && (Artifact.SCOPE_COMPILE.equals(artifact.getScope())
-					|| Artifact.SCOPE_RUNTIME.equals(artifact.getScope()))) {
-				classpathEntries.add(artifact.getFile().getAbsolutePath());
-			}
 		}
 
 		return String.join(File.pathSeparator, classpathEntries);
