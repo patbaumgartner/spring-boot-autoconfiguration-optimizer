@@ -6,7 +6,6 @@ plugins {
 }
 
 group = 'com.patbaumgartner'
-version = '1.0.0-SNAPSHOT'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -22,7 +21,11 @@ repositories {
 
 dependencies {
     implementation gradleApi()
-    implementation 'com.patbaumgartner:autoconfiguration-optimizer-core:1.0.0'
+    // The plugin and the core are versioned and released together, so the plugin's own
+    // version is the single source of truth. Overriding it (-Pversion=x.y.z) therefore
+    // moves both, and a snapshot build resolves the core from the reactor via mavenLocal
+    // instead of silently testing against the last release.
+    implementation "com.patbaumgartner:autoconfiguration-optimizer-core:${version}"
 
     testImplementation gradleTestKit()
     testImplementation platform('org.junit:junit-bom:6.1.2')
