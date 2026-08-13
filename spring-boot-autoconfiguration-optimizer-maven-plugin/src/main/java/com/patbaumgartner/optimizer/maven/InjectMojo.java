@@ -1,5 +1,6 @@
 package com.patbaumgartner.optimizer.maven;
 
+import com.patbaumgartner.optimizer.build.CoreInjector;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;

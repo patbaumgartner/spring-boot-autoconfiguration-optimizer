@@ -1,4 +1,4 @@
-package com.patbaumgartner.optimizer.maven;
+package com.patbaumgartner.optimizer.build;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -83,6 +84,25 @@ class MainClassFinderTest {
 		Optional<String> result = MainClassFinder.findMainClass(tempDir.resolve("nonexistent"));
 
 		assertThat(result).isEmpty();
+	}
+
+	@Test
+	void returnsEmptyForEmptyDirectoryList() {
+		Optional<String> result = MainClassFinder.findMainClass(List.of());
+
+		assertThat(result).isEmpty();
+	}
+
+	@Test
+	void scansMultipleDirectories() throws Exception {
+		Path emptyDir = tempDir.resolve("empty");
+		Files.createDirectories(emptyDir);
+		Path classDir = createClassFile("com/example/App.class",
+				"Lorg/springframework/boot/autoconfigure/SpringBootApplication;");
+
+		Optional<String> result = MainClassFinder.findMainClass(List.of(emptyDir, classDir));
+
+		assertThat(result).isPresent().contains("com.example.App");
 	}
 
 	/**

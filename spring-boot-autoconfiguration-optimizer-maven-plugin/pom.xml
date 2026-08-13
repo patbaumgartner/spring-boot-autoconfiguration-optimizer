@@ -17,6 +17,10 @@
   <dependencies>
     <dependency>
       <groupId>com.patbaumgartner</groupId>
+      <artifactId>autoconfiguration-optimizer-build-support</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.patbaumgartner</groupId>
       <artifactId>autoconfiguration-optimizer-core</artifactId>
     </dependency>
     <dependency>

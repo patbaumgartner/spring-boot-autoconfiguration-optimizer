@@ -1,14 +1,17 @@
-package com.patbaumgartner.optimizer.maven;
+package com.patbaumgartner.optimizer.build;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -23,7 +26,7 @@ import java.util.stream.Stream;
  * distinguished from regular classes by parsing the class file header to check for the
  * {@code ACC_ANNOTATION} access flag.
  */
-class MainClassFinder {
+public final class MainClassFinder {
 
 	private static final String SPRING_BOOT_APPLICATION_DESC = "Lorg/springframework/boot/autoconfigure/SpringBootApplication;";
 
@@ -34,22 +37,24 @@ class MainClassFinder {
 
 	/**
 	 * Finds the main class by scanning compiled {@code .class} files in the given
-	 * directory for {@code @SpringBootApplication} or {@code @SpringBootConfiguration},
-	 * including custom annotations that have {@code @SpringBootConfiguration} as a
-	 * meta-annotation.
+	 * directory.
 	 * @param classesDirectory the directory containing compiled class files
 	 * @return the fully-qualified class name, or empty if not found
-	 * @throws IOException if an I/O error occurs while walking the directory
 	 */
-	static Optional<String> findMainClass(Path classesDirectory) throws IOException {
-		if (!Files.isDirectory(classesDirectory)) {
-			return Optional.empty();
-		}
+	public static Optional<String> findMainClass(Path classesDirectory) {
+		return findMainClass(List.of(classesDirectory));
+	}
 
-		List<Path> classFiles;
-		try (Stream<Path> stream = Files.walk(classesDirectory)) {
-			classFiles = stream.filter(p -> p.toString().endsWith(".class")).collect(Collectors.toList());
-		}
+	/**
+	 * Finds the main class by scanning compiled {@code .class} files in the given
+	 * directories for {@code @SpringBootApplication} or {@code @SpringBootConfiguration},
+	 * including custom annotations that have {@code @SpringBootConfiguration} as a
+	 * meta-annotation.
+	 * @param classesDirectories the directories to scan for compiled class files
+	 * @return the fully-qualified class name, or empty if not found
+	 */
+	public static Optional<String> findMainClass(Collection<Path> classesDirectories) {
+		Map<Path, Path> classFileToBaseDir = collectClassFiles(classesDirectories);
 
 		Set<String> springBootAnnotations = new LinkedHashSet<>();
 		springBootAnnotations.add(SPRING_BOOT_APPLICATION_DESC);
@@ -60,18 +65,13 @@ class MainClassFinder {
 		boolean changed;
 		do {
 			changed = false;
-			for (Path classFile : classFiles) {
-				try {
-					byte[] bytes = Files.readAllBytes(classFile);
-					if (isAnnotationType(bytes) && hasAnyAnnotation(bytes, springBootAnnotations)) {
-						String descriptor = toDescriptor(classesDirectory, classFile);
-						if (springBootAnnotations.add(descriptor)) {
-							changed = true;
-						}
+			for (Map.Entry<Path, Path> entry : classFileToBaseDir.entrySet()) {
+				byte[] bytes = readOrNull(entry.getKey());
+				if (bytes != null && isAnnotationType(bytes) && hasAnyAnnotation(bytes, springBootAnnotations)) {
+					String descriptor = toDescriptor(entry.getValue(), entry.getKey());
+					if (springBootAnnotations.add(descriptor)) {
+						changed = true;
 					}
-				}
-				catch (IOException e) {
-					// ignore unreadable files
 				}
 			}
 		}
@@ -79,19 +79,44 @@ class MainClassFinder {
 
 		// Find the first non-annotation class that carries one of the known Spring Boot
 		// annotation descriptors.
-		for (Path classFile : classFiles) {
-			try {
-				byte[] bytes = Files.readAllBytes(classFile);
-				if (!isAnnotationType(bytes) && hasAnyAnnotation(bytes, springBootAnnotations)) {
-					return Optional.of(toClassName(classesDirectory, classFile));
-				}
-			}
-			catch (IOException e) {
-				// ignore unreadable files
+		for (Map.Entry<Path, Path> entry : classFileToBaseDir.entrySet()) {
+			byte[] bytes = readOrNull(entry.getKey());
+			if (bytes != null && !isAnnotationType(bytes) && hasAnyAnnotation(bytes, springBootAnnotations)) {
+				return Optional.of(toClassName(entry.getValue(), entry.getKey()));
 			}
 		}
 
 		return Optional.empty();
+	}
+
+	private static Map<Path, Path> collectClassFiles(Collection<Path> directories) {
+		Map<Path, Path> result = new LinkedHashMap<>();
+		for (Path dir : directories) {
+			if (!Files.isDirectory(dir)) {
+				continue;
+			}
+			try (Stream<Path> stream = Files.walk(dir)) {
+				List<Path> classFiles = new ArrayList<>();
+				stream.filter(p -> p.toString().endsWith(".class")).forEach(classFiles::add);
+				classFiles.sort(Path::compareTo);
+				for (Path classFile : classFiles) {
+					result.put(classFile, dir);
+				}
+			}
+			catch (IOException ex) {
+				// ignore unreadable directories
+			}
+		}
+		return result;
+	}
+
+	private static byte[] readOrNull(Path classFile) {
+		try {
+			return Files.readAllBytes(classFile);
+		}
+		catch (IOException ex) {
+			return null;
+		}
 	}
 
 	private static boolean hasAnyAnnotation(byte[] classBytes, Set<String> descriptors) {

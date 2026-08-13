@@ -34,7 +34,7 @@ jobs:
         run: mvn --batch-mode versions:set -DnewVersion=${{ steps.version.outputs.VERSION }} -DgenerateBackupPoms=false
 
       - name: Install Maven core to local repository
-        run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -N && mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl autoconfiguration-optimizer-core
+        run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -N && mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl autoconfiguration-optimizer-core,autoconfiguration-optimizer-build-support
 
       - name: Stage Maven artifacts to local directory
         run: mvn --batch-mode --no-transfer-progress deploy -Ppublication

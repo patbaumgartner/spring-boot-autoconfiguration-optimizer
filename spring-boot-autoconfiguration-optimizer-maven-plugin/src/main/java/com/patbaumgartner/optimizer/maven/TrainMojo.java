@@ -1,6 +1,8 @@
 package com.patbaumgartner.optimizer.maven;
 
 import org.apache.maven.artifact.Artifact;
+import com.patbaumgartner.optimizer.build.CoreInjector;
+import com.patbaumgartner.optimizer.build.MainClassFinder;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -262,15 +264,10 @@ public class TrainMojo extends AbstractMojo {
 		// Try to auto-detect by scanning compiled classes for @SpringBootApplication
 		// or @SpringBootConfiguration
 		Path outputDirectory = Path.of(project.getBuild().getOutputDirectory());
-		try {
-			Optional<String> detected = MainClassFinder.findMainClass(outputDirectory);
-			if (detected.isPresent()) {
-				getLog().info("Spring Boot Autoconfiguration Optimizer: Auto-detected main class: " + detected.get());
-				return detected.get();
-			}
-		}
-		catch (IOException e) {
-			getLog().debug("Could not scan classes directory for main class: " + e.getMessage());
+		Optional<String> detected = MainClassFinder.findMainClass(outputDirectory);
+		if (detected.isPresent()) {
+			getLog().info("Spring Boot Autoconfiguration Optimizer: Auto-detected main class: " + detected.get());
+			return detected.get();
 		}
 
 		throw new MojoExecutionException("Could not determine main class. Please configure the 'mainClass' parameter, "

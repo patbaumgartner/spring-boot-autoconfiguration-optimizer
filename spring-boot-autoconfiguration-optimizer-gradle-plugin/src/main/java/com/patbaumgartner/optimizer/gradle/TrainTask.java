@@ -1,5 +1,7 @@
 package com.patbaumgartner.optimizer.gradle;
 
+import com.patbaumgartner.optimizer.build.CoreInjector;
+import com.patbaumgartner.optimizer.build.MainClassFinder;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
@@ -185,16 +187,15 @@ public abstract class TrainTask extends DefaultTask {
             return;
         }
         // Inject into each classes directory configured for this task
-        Iterable<File> dirs = resolveClassesDirectoriesForScan();
         boolean injected = false;
-        for (File dir : dirs) {
-            if (dir.isDirectory()) {
+        for (Path dir : resolveClassesDirectoriesForScan()) {
+            if (Files.isDirectory(dir)) {
                 try {
-                    CoreInjector.injectCoreJarContents(coreJar, dir.toPath());
+                    CoreInjector.injectCoreJarContents(coreJar, dir);
                     getLogger().lifecycle(
                             "Spring Boot Autoconfiguration Optimizer: Core classes injected into: {}", dir);
                     injected = true;
-                } catch (java.io.IOException ex) {
+                } catch (IOException ex) {
                     throw new GradleException("Failed to inject optimizer core classes into " + dir, ex);
                 }
             }
@@ -233,8 +234,8 @@ public abstract class TrainTask extends DefaultTask {
             command.add(getMainClass().get());
         } else {
             // Try to auto-detect main class by scanning compiled class files
-            Iterable<File> dirsToScan = resolveClassesDirectoriesForScan();
-            java.util.Optional<String> detectedMainClass = MainClassFinder.findMainClass(dirsToScan);
+            java.util.Optional<String> detectedMainClass = MainClassFinder
+                    .findMainClass(resolveClassesDirectoriesForScan());
             if (detectedMainClass.isPresent()) {
                 String mainClassValue = detectedMainClass.get();
                 getLogger().lifecycle(
@@ -282,12 +283,15 @@ public abstract class TrainTask extends DefaultTask {
         return entries.stream().collect(Collectors.joining(File.pathSeparator));
     }
 
-    private Iterable<File> resolveClassesDirectoriesForScan() {
+    private List<Path> resolveClassesDirectoriesForScan() {
         if (!getClassesDirectories().isEmpty()) {
-            return getClassesDirectories().getFiles();
+            return getClassesDirectories().getFiles().stream().map(File::toPath).collect(Collectors.toList());
         }
         if (getRuntimeClasspath().isPresent() && !getRuntimeClasspath().get().isEmpty()) {
-            return getRuntimeClasspath().get().stream().filter(File::isDirectory).collect(Collectors.toList());
+            return getRuntimeClasspath().get().stream()
+                    .filter(File::isDirectory)
+                    .map(File::toPath)
+                    .collect(Collectors.toList());
         }
         return List.of();
     }
