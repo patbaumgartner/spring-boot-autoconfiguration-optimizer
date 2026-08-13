@@ -12,6 +12,7 @@
 
   <modules>
     <module>autoconfiguration-optimizer-core</module>
+    <module>autoconfiguration-optimizer-build-support</module>
     <module>spring-boot-autoconfiguration-optimizer-maven-plugin</module>
     <module>benchmarks</module>
   </modules>
@@ -63,6 +64,11 @@
       <dependency>
         <groupId>com.patbaumgartner</groupId>
         <artifactId>autoconfiguration-optimizer-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.patbaumgartner</groupId>
+        <artifactId>autoconfiguration-optimizer-build-support</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

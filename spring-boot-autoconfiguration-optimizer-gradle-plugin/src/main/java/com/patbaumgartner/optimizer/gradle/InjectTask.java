@@ -1,5 +1,6 @@
 package com.patbaumgartner.optimizer.gradle;
 
+import com.patbaumgartner.optimizer.build.CoreInjector;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.DirectoryProperty;

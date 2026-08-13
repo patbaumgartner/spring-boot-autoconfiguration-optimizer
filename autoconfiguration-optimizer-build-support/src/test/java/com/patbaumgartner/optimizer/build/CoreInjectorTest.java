@@ -1,4 +1,4 @@
-package com.patbaumgartner.optimizer.maven;
+package com.patbaumgartner.optimizer.build;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;

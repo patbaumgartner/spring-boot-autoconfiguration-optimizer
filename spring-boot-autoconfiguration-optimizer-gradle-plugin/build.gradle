@@ -26,6 +26,7 @@ dependencies {
     // moves both, and a snapshot build resolves the core from the reactor via mavenLocal
     // instead of silently testing against the last release.
     implementation "com.patbaumgartner:autoconfiguration-optimizer-core:${version}"
+    implementation "com.patbaumgartner:autoconfiguration-optimizer-build-support:${version}"
 
     testImplementation gradleTestKit()
     testImplementation platform('org.junit:junit-bom:6.1.2')

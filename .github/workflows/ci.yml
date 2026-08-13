@@ -69,7 +69,7 @@ jobs:
           cache: gradle
 
       - name: Install Maven modules to local repository
-        run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -N && mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl autoconfiguration-optimizer-core
+        run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -N && mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl autoconfiguration-optimizer-core,autoconfiguration-optimizer-build-support
 
       - name: Build with Gradle
         working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin
@@ -342,7 +342,7 @@ jobs:
           cache: gradle
 
       - name: Install Maven modules to local repository
-        run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -N && mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl autoconfiguration-optimizer-core
+        run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -N && mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl autoconfiguration-optimizer-core,autoconfiguration-optimizer-build-support
 
       - name: Publish Gradle plugin to local Maven repository
         working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin

@@ -1,4 +1,4 @@
-package com.patbaumgartner.optimizer.gradle;
+package com.patbaumgartner.optimizer.build;
 
 import com.patbaumgartner.optimizer.OptimizedAutoConfigurationImportFilter;
 
@@ -20,11 +20,18 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 /**
- * Utility for locating the {@code autoconfiguration-optimizer-core} JAR on the plugin
- * classpath and injecting its classes and META-INF resources into a target directory
- * (typically the project's main classes output directory).
+ * Locates the {@code autoconfiguration-optimizer-core} JAR on the build plugin classpath
+ * and injects its classes and META-INF resources into a target directory (the project's
+ * compile output directory, e.g. {@code target/classes} or
+ * {@code build/classes/java/main}).
+ *
+ * <p>
+ * This allows the optimizer to work at runtime without requiring users to add
+ * {@code autoconfiguration-optimizer-core} as an explicit project dependency. The plugin
+ * injects the necessary classes into the build output so they are included in the final
+ * packaged artifact.
  */
-final class CoreInjector {
+public final class CoreInjector {
 
 	private static final String SPRING_FACTORIES = "META-INF/spring.factories";
 
@@ -37,12 +44,14 @@ final class CoreInjector {
 	 * Locates the {@code autoconfiguration-optimizer-core} JAR on the plugin classpath.
 	 * @return path to the core JAR, or {@code null} if running from a directory (e.g.,
 	 * IDE/development mode)
+	 * @throws IllegalStateException if the JAR location cannot be determined
 	 */
-	static Path findCoreJar() {
-		URL location = OptimizedAutoConfigurationImportFilter.class.getProtectionDomain().getCodeSource()
-			.getLocation();
+	public static Path findCoreJar() {
+		URL location = OptimizedAutoConfigurationImportFilter.class.getProtectionDomain().getCodeSource().getLocation();
 		String locationStr = location.toString();
 		if (locationStr.endsWith("/") || locationStr.endsWith("\\")) {
+			// Running from an exploded directory (IDE / build reactor mode) - no JAR to
+			// inject
 			return null;
 		}
 		try {
@@ -58,10 +67,10 @@ final class CoreInjector {
 	 * given output directory, merging {@code spring.factories} and
 	 * {@code AutoConfiguration.imports} files if they already exist.
 	 * @param coreJar path to the optimizer core JAR
-	 * @param outputDir target directory (e.g. {@code build/classes/java/main})
+	 * @param outputDir target directory (e.g. {@code target/classes})
 	 * @throws IOException if any I/O error occurs
 	 */
-	static void injectCoreJarContents(Path coreJar, Path outputDir) throws IOException {
+	public static void injectCoreJarContents(Path coreJar, Path outputDir) throws IOException {
 		Files.createDirectories(outputDir);
 		Path canonicalOutputDir = outputDir.toRealPath();
 		try (JarFile jarFile = new JarFile(coreJar.toFile())) {
@@ -83,12 +92,12 @@ final class CoreInjector {
 									+ canonicalOutputDir + "'. Aborting injection.");
 				}
 
-				if (name.equals(SPRING_FACTORIES)) {
+				if (SPRING_FACTORIES.equals(name)) {
 					try (InputStream is = jarFile.getInputStream(entry)) {
 						mergeSpringFactories(is, targetPath);
 					}
 				}
-				else if (name.equals(AUTOCONFIG_IMPORTS)) {
+				else if (AUTOCONFIG_IMPORTS.equals(name)) {
 					try (InputStream is = jarFile.getInputStream(entry)) {
 						mergeLineBasedFile(is, targetPath);
 					}
@@ -106,15 +115,21 @@ final class CoreInjector {
 	}
 
 	private static boolean shouldSkipEntry(String name) {
-		if (name.equals("META-INF/MANIFEST.MF")) {
+		if ("META-INF/MANIFEST.MF".equals(name)) {
 			return true;
 		}
+		// Skip JAR signature files
 		if (name.startsWith("META-INF/") && (name.endsWith(".SF") || name.endsWith(".RSA") || name.endsWith(".DSA"))) {
 			return true;
 		}
 		return false;
 	}
 
+	/**
+	 * Merges a {@code spring.factories} entry from the core JAR into the target file. If
+	 * the target already exists, values for each factory key are merged
+	 * (comma-separated), avoiding duplicates. New keys are appended.
+	 */
 	private static void mergeSpringFactories(InputStream source, Path target) throws IOException {
 		Properties coreProps = new Properties();
 		coreProps.load(source);
@@ -146,14 +161,15 @@ final class CoreInjector {
 			}
 
 			if (changed) {
-				try (var writer = Files.newBufferedWriter(target, StandardCharsets.UTF_8,
-						StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
+				try (var writer = Files.newBufferedWriter(target, StandardCharsets.UTF_8, StandardOpenOption.WRITE,
+						StandardOpenOption.TRUNCATE_EXISTING)) {
 					existingProps.store(writer, null);
 				}
 			}
 		}
 		else {
 			Files.createDirectories(target.getParent());
+			// Re-read from coreProps to write
 			Map<String, String> entries = new LinkedHashMap<>();
 			for (String key : coreProps.stringPropertyNames()) {
 				entries.put(key, coreProps.getProperty(key));
@@ -167,6 +183,11 @@ final class CoreInjector {
 		}
 	}
 
+	/**
+	 * Merges a line-based file (e.g. {@code AutoConfiguration.imports}) from the core JAR
+	 * into the target. Lines from the core that do not already appear in the target are
+	 * appended.
+	 */
 	private static void mergeLineBasedFile(InputStream source, Path target) throws IOException {
 		String coreContent = new String(source.readAllBytes(), StandardCharsets.UTF_8);
 		Set<String> coreLines = new LinkedHashSet<>();
