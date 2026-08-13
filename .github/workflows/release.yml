@@ -36,18 +36,12 @@ jobs:
       - name: Install Maven core to local repository
         run: mvn --batch-mode --no-transfer-progress install -DskipTests -q -N && mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl autoconfiguration-optimizer-core
 
-      - name: Update Gradle plugin version and core dependency version
-        working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin
-        run: |
-          sed -i "s/^version = '.*'/version = '${{ steps.version.outputs.VERSION }}'/" build.gradle
-          sed -i "s/autoconfiguration-optimizer-core:[^']*'/autoconfiguration-optimizer-core:${{ steps.version.outputs.VERSION }}'/" build.gradle
-
       - name: Stage Maven artifacts to local directory
         run: mvn --batch-mode --no-transfer-progress deploy -Ppublication
 
       - name: Stage Gradle plugin artifacts to local directory
         working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin
-        run: ./gradlew --no-daemon publishAllPublicationsToStagingRepository
+        run: ./gradlew --no-daemon -Pversion=${{ steps.version.outputs.VERSION }} publishAllPublicationsToStagingRepository
 
       - name: Deploy to Maven Central via JReleaser
         env:
@@ -69,7 +63,7 @@ jobs:
       - name: Publish Gradle Plugin to Plugin Portal
         continue-on-error: true
         working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin
-        run: ./gradlew --no-daemon publishPlugins
+        run: ./gradlew --no-daemon -Pversion=${{ steps.version.outputs.VERSION }} publishPlugins
         env:
           GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
           GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
