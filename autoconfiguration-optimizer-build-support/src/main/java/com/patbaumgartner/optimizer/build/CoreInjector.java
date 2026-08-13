@@ -9,6 +9,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
@@ -36,6 +37,13 @@ public final class CoreInjector {
 	private static final String SPRING_FACTORIES = "META-INF/spring.factories";
 
 	private static final String AUTOCONFIG_IMPORTS = "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports";
+
+	/**
+	 * Entries under this prefix are owned by the optimizer. They are always overwritten
+	 * so that upgrading the build plugin replaces the previously injected classes instead
+	 * of leaving a stale mixture of two core versions in the build output.
+	 */
+	private static final String OWNED_ENTRY_PREFIX = "com/patbaumgartner/optimizer/";
 
 	private CoreInjector() {
 	}
@@ -103,7 +111,13 @@ public final class CoreInjector {
 					}
 				}
 				else if (!entry.isDirectory()) {
-					if (!Files.exists(targetPath)) {
+					if (name.startsWith(OWNED_ENTRY_PREFIX)) {
+						Files.createDirectories(targetPath.getParent());
+						try (InputStream is = jarFile.getInputStream(entry)) {
+							Files.copy(is, targetPath, StandardCopyOption.REPLACE_EXISTING);
+						}
+					}
+					else if (!Files.exists(targetPath)) {
 						Files.createDirectories(targetPath.getParent());
 						try (InputStream is = jarFile.getInputStream(entry)) {
 							Files.copy(is, targetPath);
@@ -122,7 +136,10 @@ public final class CoreInjector {
 		if (name.startsWith("META-INF/") && (name.endsWith(".SF") || name.endsWith(".RSA") || name.endsWith(".DSA"))) {
 			return true;
 		}
-		return false;
+		// Skip the core's own build provenance; copying it would make the consumer's
+		// artifact claim to be autoconfiguration-optimizer-core to any tool that reads
+		// META-INF/maven/**/pom.properties.
+		return name.startsWith("META-INF/maven/");
 	}
 
 	/**
@@ -134,51 +151,45 @@ public final class CoreInjector {
 		Properties coreProps = new Properties();
 		coreProps.load(source);
 
-		if (Files.exists(target)) {
+		Map<String, Set<String>> merged = new LinkedHashMap<>();
+		boolean targetExists = Files.exists(target);
+		if (targetExists) {
 			Properties existingProps = new Properties();
 			try (InputStream existingStream = Files.newInputStream(target)) {
 				existingProps.load(existingStream);
 			}
-
-			boolean changed = false;
-			for (String key : coreProps.stringPropertyNames()) {
-				String coreValues = coreProps.getProperty(key);
-				String existingValue = existingProps.getProperty(key);
-				if (existingValue == null || existingValue.isBlank()) {
-					existingProps.setProperty(key, coreValues);
-					changed = true;
-				}
-				else {
-					Set<String> existing = parseCommaSeparated(existingValue);
-					Set<String> toAdd = parseCommaSeparated(coreValues);
-					toAdd.removeAll(existing);
-					if (!toAdd.isEmpty()) {
-						existing.addAll(toAdd);
-						existingProps.setProperty(key, String.join(",\\\n  ", existing));
-						changed = true;
-					}
-				}
-			}
-
-			if (changed) {
-				try (var writer = Files.newBufferedWriter(target, StandardCharsets.UTF_8, StandardOpenOption.WRITE,
-						StandardOpenOption.TRUNCATE_EXISTING)) {
-					existingProps.store(writer, null);
-				}
+			for (String key : existingProps.stringPropertyNames()) {
+				merged.put(key, parseCommaSeparated(existingProps.getProperty(key)));
 			}
 		}
-		else {
-			Files.createDirectories(target.getParent());
-			// Re-read from coreProps to write
-			Map<String, String> entries = new LinkedHashMap<>();
-			for (String key : coreProps.stringPropertyNames()) {
-				entries.put(key, coreProps.getProperty(key));
-			}
-			try (var writer = Files.newBufferedWriter(target, StandardCharsets.UTF_8)) {
-				for (Map.Entry<String, String> e : entries.entrySet()) {
-					writer.write(e.getKey() + "=\\\n  " + e.getValue().replace(",", ",\\\n  "));
-					writer.newLine();
-				}
+
+		boolean changed = false;
+		for (String key : coreProps.stringPropertyNames()) {
+			Set<String> values = merged.computeIfAbsent(key, (k) -> new LinkedHashSet<>());
+			changed |= values.addAll(parseCommaSeparated(coreProps.getProperty(key)));
+		}
+
+		if (!targetExists || changed) {
+			writeSpringFactories(merged, target);
+		}
+	}
+
+	/**
+	 * Writes factory entries using {@code properties} line-continuation syntax.
+	 *
+	 * <p>
+	 * {@link Properties#store} must not be used here: it escapes the backslash of a
+	 * continuation that is already embedded in a value, so a merged multi-valued key is
+	 * read back as a class name beginning with a literal backslash and Spring Boot then
+	 * fails to instantiate the factory. Keys and values are Java class names, which
+	 * require no further escaping.
+	 */
+	private static void writeSpringFactories(Map<String, Set<String>> entries, Path target) throws IOException {
+		Files.createDirectories(target.getParent());
+		try (var writer = Files.newBufferedWriter(target, StandardCharsets.UTF_8)) {
+			for (Map.Entry<String, Set<String>> entry : entries.entrySet()) {
+				writer.write(entry.getKey() + "=\\\n  " + String.join(",\\\n  ", entry.getValue()));
+				writer.newLine();
 			}
 		}
 	}
