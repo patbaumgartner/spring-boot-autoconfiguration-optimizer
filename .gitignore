@@ -41,3 +41,10 @@ out/
 target/
 .flattened-pom.xml
 *.bak
+
+### Generated benchmark output ###
+# Results are produced per run and published as CI artifacts; a committed copy
+# only goes stale and misrepresents current performance.
+benchmarks/results/**
+benchmarks/results-gradle/**
+!benchmarks/results/.gitkeep

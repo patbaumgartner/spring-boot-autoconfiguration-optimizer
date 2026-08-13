@@ -60,11 +60,17 @@ public class StartupTimeBenchmark {
 	public void setup() {
 		javaExecutable = Path.of(System.getProperty("java.home"), "bin", "java").toString();
 
-		// Find the PetClinic JAR
+		// Reporting a placeholder when the application under test is missing would
+		// publish a benchmark result that measures nothing.
 		String jarPath = System.getProperty("petclinic.jar");
-		if (jarPath != null && new File(jarPath).exists()) {
-			petclinicJar = jarPath;
+		if (jarPath == null || jarPath.isBlank()) {
+			throw new IllegalStateException(
+					"Set -Dpetclinic.jar=<path> to the Spring Boot application JAR to benchmark.");
 		}
+		if (!new File(jarPath).isFile()) {
+			throw new IllegalStateException("The JAR set via -Dpetclinic.jar does not exist: " + jarPath);
+		}
+		petclinicJar = jarPath;
 	}
 
 	/**
@@ -84,10 +90,6 @@ public class StartupTimeBenchmark {
 	}
 
 	private double measureStartupTime(List<String> extraArgs) throws IOException, InterruptedException {
-		if (petclinicJar == null) {
-			return -1;
-		}
-
 		List<String> command = new ArrayList<>();
 		command.add(javaExecutable);
 		command.addAll(extraArgs);
@@ -113,9 +115,16 @@ public class StartupTimeBenchmark {
 			}
 		}
 		finally {
+			process.descendants().forEach(ProcessHandle::destroyForcibly);
 			process.destroyForcibly();
+			process.waitFor();
 		}
 
+		if (startupTime < 0) {
+			throw new IllegalStateException(
+					"The application exited without logging a startup time. Run it manually with the same "
+							+ "arguments to see why: " + String.join(" ", command));
+		}
 		return startupTime;
 	}
 
