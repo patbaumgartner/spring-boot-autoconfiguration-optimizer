@@ -5,9 +5,12 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.env.MockEnvironment;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -64,6 +67,30 @@ class AutoConfigurationOptimizerIntegrationTest {
 	void trainingRunLeavesNoTemporaryArtifactsBehind() throws Exception {
 		try (var entries = Files.list(outputDirectory)) {
 			assertThat(entries).containsExactly(outputDirectory.resolve(OUTPUT_FILE));
+		}
+	}
+
+	/**
+	 * Round trip over the real file: what the training run writes has to be exactly what
+	 * the filter can read back. Asserting the writer and the reader separately let the
+	 * two drift apart without any test noticing.
+	 */
+	@Test
+	void theProducedTrainingFileDrivesTheFilter() throws Exception {
+		Path classpathRoot = Files.createTempDirectory(outputDirectory.getParent(), "optimized-classpath");
+		Path onClasspath = classpathRoot.resolve(TrainingFile.RESOURCE_LOCATION);
+		Files.createDirectories(onClasspath.getParent());
+		Files.copy(outputDirectory.resolve(OUTPUT_FILE), onClasspath);
+
+		OptimizedAutoConfigurationImportFilter filter = new OptimizedAutoConfigurationImportFilter();
+		filter.setEnvironment(new MockEnvironment());
+		try (URLClassLoader classLoader = new URLClassLoader(new URL[] { classpathRoot.toUri().toURL() }, null)) {
+			filter.setBeanClassLoader(classLoader);
+
+			assertThat(filter.getExcludedConfigurations()).isNotNull()
+				.contains(AutoConfigurationOptimizerAutoConfiguration.class.getName());
+			assertThat(filter.match(new String[] { "com.example.IntroducedAfterTrainingAutoConfiguration" }, null))
+				.containsExactly(true);
 		}
 	}
 

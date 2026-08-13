@@ -3,6 +3,7 @@ package com.patbaumgartner.optimizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.SpringBootVersion;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionEvaluationReport;
 import org.springframework.boot.context.annotation.ImportCandidates;
@@ -11,38 +12,41 @@ import org.springframework.context.ApplicationListener;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.TreeSet;
 
 /**
- * Application listener that records which auto-configurations were loaded during a
- * training run.
+ * Application listener that records which auto-configurations were <em>not</em> used
+ * during a training run.
  *
  * <p>
  * This listener is activated when {@code autoconfiguration.optimizer.training-run=true}
- * is set. It uses Spring Boot's {@link ConditionEvaluationReport} to determine which
- * auto-configurations were active and writes them to a properties file.
+ * is set. It cross-references Spring Boot's {@link ConditionEvaluationReport} with the
+ * registered auto-configuration candidates and writes everything that did not apply to a
+ * properties file.
  *
  * <p>
  * The generated file should be placed in {@code META-INF/} on the classpath to be picked
  * up by subsequent builds and used by the {@link OptimizedAutoConfigurationImportFilter}.
  *
  * @see OptimizedAutoConfigurationImportFilter
- * @see AutoConfigurationOptimizerProperties
+ * @see TrainingFile
  */
 public class TrainingRunApplicationListener implements ApplicationListener<ApplicationStartedEvent> {
 
 	private static final Logger log = LoggerFactory.getLogger(TrainingRunApplicationListener.class);
 
-	static final String TRAINING_TIMESTAMP_KEY = "autoconfiguration.optimizer.training-timestamp";
+	private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
 	private final AutoConfigurationOptimizerProperties properties;
 
@@ -58,149 +62,153 @@ public class TrainingRunApplicationListener implements ApplicationListener<Appli
 	public void onApplicationEvent(ApplicationStartedEvent event) {
 		log.info("Spring Boot Autoconfiguration Optimizer: Training run started");
 
+		Exception failure = null;
 		try {
-			Set<String> availableAutoConfigs = loadAvailableAutoConfigurations();
-			List<String> loadedAutoConfigs = detectLoadedAutoConfigurations(availableAutoConfigs);
-			writeTrainingFile(loadedAutoConfigs, availableAutoConfigs.size());
+			Set<String> candidates = loadAutoConfigurationCandidates();
+			Set<String> loaded = detectLoadedAutoConfigurations(candidates);
+			List<String> excluded = candidates.stream().filter((candidate) -> !loaded.contains(candidate)).sorted().toList();
 
-			log.atInfo()
-				.addArgument(() -> loadedAutoConfigs.size())
-				.addArgument(() -> availableAutoConfigs.size())
-				.addArgument(() -> availableAutoConfigs.size() - loadedAutoConfigs.size())
-				.log("Spring Boot Autoconfiguration Optimizer: Training run complete. "
-						+ "Detected {} loaded auto-configurations out of {} available ({} will be skipped at startup).");
+			writeTrainingFile(excluded, candidates);
+
+			log.info(
+					"Spring Boot Autoconfiguration Optimizer: Training run complete. {} of {} auto-configurations were "
+							+ "used; the remaining {} will be skipped at startup.",
+					loaded.size(), candidates.size(), excluded.size());
 		}
-		catch (Exception e) {
-			log.error("Spring Boot Autoconfiguration Optimizer: Training run failed"
-					+ " (loading/detecting auto-configurations or writing training file)", e);
+		catch (Exception ex) {
+			failure = ex;
+			log.error("Spring Boot Autoconfiguration Optimizer: Training run failed", ex);
 		}
-		finally {
-			if (properties.isExitAfterTraining()) {
-				log.info("Spring Boot Autoconfiguration Optimizer: Exiting after training run.");
-				int exitCode = SpringApplication.exit(event.getApplicationContext(), () -> 0);
-				System.exit(exitCode);
-			}
+
+		if (this.properties.isExitAfterTraining()) {
+			// The build plugins run the training in a forked JVM and treat a non-zero
+			// exit as a build failure, so the status must reflect what actually happened.
+			int status = (failure == null) ? 0 : 1;
+			log.info("Spring Boot Autoconfiguration Optimizer: Exiting after training run with status {}.", status);
+			System.exit(SpringApplication.exit(event.getApplicationContext(), () -> status));
+		}
+		else if (failure != null) {
+			throw new IllegalStateException(
+					"Spring Boot Autoconfiguration Optimizer: Training run failed and produced no usable training file",
+					failure);
 		}
 	}
 
 	/**
-	 * Detects which auto-configurations were loaded by cross-referencing the
-	 * {@link ConditionEvaluationReport} with all available auto-configurations on the
-	 * classpath.
+	 * Determines which of the given candidates Spring Boot actually loaded.
 	 *
 	 * <p>
-	 * Auto-configurations fall into two categories in the report:
-	 * <ol>
-	 * <li>Those with class-level conditions (e.g. {@code @ConditionalOnClass}) appear as
-	 * top-level keys and are included only when {@code isFullMatch()} is
-	 * {@code true}.</li>
-	 * <li>Those without class-level conditions (always loaded) appear only as
-	 * {@code ClassName#methodName} keys for their {@code @Bean} methods. These must also
-	 * be captured, otherwise they are incorrectly excluded by the optimizer.</li>
-	 * </ol>
+	 * An auto-configuration counts as loaded when its class-level conditions all matched,
+	 * or when it appears in {@link ConditionEvaluationReport#getUnconditionalClasses()},
+	 * which holds the candidates that survived Spring Boot's own import filters without
+	 * having any class-level condition evaluated. Candidates rejected by those filters
+	 * appear in neither collection and are therefore correctly treated as unused.
+	 * @param candidates the registered auto-configuration candidates
+	 * @return the subset that was loaded
 	 */
-	List<String> detectLoadedAutoConfigurations() {
-		return detectLoadedAutoConfigurations(loadAvailableAutoConfigurations());
-	}
-
-	private List<String> detectLoadedAutoConfigurations(Set<String> availableAutoConfigs) {
-		Map<String, ConditionEvaluationReport.ConditionAndOutcomes> conditionOutcomes = conditionEvaluationReport
+	Set<String> detectLoadedAutoConfigurations(Set<String> candidates) {
+		Map<String, ConditionEvaluationReport.ConditionAndOutcomes> outcomesBySource = this.conditionEvaluationReport
 			.getConditionAndOutcomesBySource();
+		Set<String> unconditional = this.conditionEvaluationReport.getUnconditionalClasses();
 
-		// Collect class names that appear only as method-level entries
-		// (e.g. "com.example.FooAutoConfiguration#fooBean" ->
-		// "com.example.FooAutoConfiguration").
-		// Note: '#' is the method separator used by ConditionEvaluationReport;
-		// inner-class names use '$' and are unaffected by this filter.
-		Set<String> classesFromMethodEntries = conditionOutcomes.keySet()
-			.stream()
-			.filter(key -> key.contains("#"))
-			.map(key -> key.substring(0, key.indexOf('#')))
-			.collect(Collectors.toSet());
-
-		String optimizerAutoConfigClassName = AutoConfigurationOptimizerAutoConfiguration.class.getName();
-
-		return availableAutoConfigs.stream().filter(config -> {
-			// Always exclude the optimizer's own auto-configuration: it is only useful
-			// during a training run and must not be recorded so that it is also excluded
-			// on subsequent production runs.
-			if (optimizerAutoConfigClassName.equals(config)) {
-				return false;
+		Set<String> loaded = new LinkedHashSet<>();
+		for (String candidate : candidates) {
+			ConditionEvaluationReport.ConditionAndOutcomes outcomes = outcomesBySource.get(candidate);
+			boolean applied = (outcomes != null) ? outcomes.isFullMatch() : unconditional.contains(candidate);
+			if (applied) {
+				loaded.add(candidate);
 			}
-			ConditionEvaluationReport.ConditionAndOutcomes outcomes = conditionOutcomes.get(config);
-			if (outcomes != null) {
-				// Class-level conditions exist: include only when all conditions passed
-				return outcomes.isFullMatch();
-			}
-			// No class-level conditions: include when the class appears in any
-			// bean-method
-			// entry, which confirms it was loaded unconditionally
-			return classesFromMethodEntries.contains(config);
-		}).sorted().collect(Collectors.toList());
+		}
+
+		// The optimizer's own auto-configuration is only useful during training, so it is
+		// deliberately reported as unused and ends up in the exclusion list.
+		loaded.remove(AutoConfigurationOptimizerAutoConfiguration.class.getName());
+		return loaded;
 	}
 
 	/**
-	 * Loads all available auto-configuration class names using Spring Boot's
+	 * Loads all registered auto-configuration candidate class names using Spring Boot's
 	 * {@link ImportCandidates} mechanism.
+	 * @return the candidate class names
 	 */
-	Set<String> loadAvailableAutoConfigurations() {
+	Set<String> loadAutoConfigurationCandidates() {
 		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-		Set<String> autoConfigs = new HashSet<>(
-				ImportCandidates.load(AutoConfiguration.class, classLoader).getCandidates());
-		log.atDebug()
-			.addArgument(() -> autoConfigs.size())
-			.log("Spring Boot Autoconfiguration Optimizer: Found {} available auto-configurations");
-		return autoConfigs;
+		Set<String> candidates = new TreeSet<>();
+		ImportCandidates.load(AutoConfiguration.class, classLoader).forEach(candidates::add);
+		log.debug("Spring Boot Autoconfiguration Optimizer: Found {} auto-configuration candidates", candidates.size());
+		return candidates;
 	}
 
 	/**
-	 * Writes the list of loaded auto-configurations to the output file.
+	 * Writes the auto-configurations to skip to the configured output file.
+	 * @param excludedAutoConfigs the auto-configurations that were not used
+	 * @param candidates all registered candidates seen during training
+	 * @throws IOException if the file cannot be written
 	 */
-	void writeTrainingFile(List<String> loadedAutoConfigs, int totalAvailableCount) throws IOException {
-		Path outputDir = Path.of(properties.getOutputDirectory());
+	void writeTrainingFile(List<String> excludedAutoConfigs, Set<String> candidates) throws IOException {
+		Path outputDir = Path.of(this.properties.getOutputDirectory());
 		Files.createDirectories(outputDir);
 
 		// Validate the output file name to prevent path traversal: it must be a simple
 		// filename with no directory components.
-		Path outputFileNamePath = Path.of(properties.getOutputFile());
-		if (outputFileNamePath.isAbsolute() || outputFileNamePath.getNameCount() != 1) {
+		Path outputFileName = Path.of(this.properties.getOutputFile());
+		if (outputFileName.isAbsolute() || outputFileName.getNameCount() != 1) {
 			throw new IllegalArgumentException(
-					"Output file name must be a simple filename without directory components: " + outputFileNamePath);
+					"Output file name must be a simple filename without directory components: " + outputFileName);
 		}
+		Path outputFile = outputDir.resolve(outputFileName.getFileName());
 
-		Path outputFile = outputDir.resolve(outputFileNamePath.getFileName());
+		String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMAT);
+		int loadedCount = candidates.size() - excludedAutoConfigs.size();
 
 		List<String> lines = new ArrayList<>();
 		lines.add("# Generated by Spring Boot Autoconfiguration Optimizer");
-		lines.add("# Training run completed on: " + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+		lines.add("# Training run completed on: " + timestamp);
 		lines.add("# This file is placed in META-INF/ on the classpath by the build plugin.");
 		lines.add("#");
-		lines.add("# Total available auto-configurations: " + totalAvailableCount);
-		lines.add("# Auto-configurations loaded during training: " + loadedAutoConfigs.size());
-		lines.add("# Auto-configurations to skip at startup: " + (totalAvailableCount - loadedAutoConfigs.size()));
+		lines.add("# Auto-configuration candidates at training time: " + candidates.size());
+		lines.add("# Loaded during training: " + loadedCount);
+		lines.add("# Excluded on subsequent starts: " + excludedAutoConfigs.size());
 		lines.add("");
-		lines.add(TRAINING_TIMESTAMP_KEY + "=" + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+		lines.add(TrainingFile.FORMAT_VERSION_KEY + "=" + TrainingFile.FORMAT_VERSION);
+		lines.add(TrainingFile.TRAINING_TIMESTAMP_KEY + "=" + timestamp);
+		lines.add(TrainingFile.SPRING_BOOT_VERSION_KEY + "=" + springBootVersion());
+		lines.add(TrainingFile.CANDIDATE_COUNT_KEY + "=" + candidates.size());
+		lines.add(TrainingFile.CANDIDATE_DIGEST_KEY + "=" + TrainingFile.candidateDigest(candidates));
 		lines.add("");
+		lines.add(TrainingFile.EXCLUDED_CONFIGURATIONS_KEY + "="
+				+ (excludedAutoConfigs.isEmpty() ? "" : "\\\n  " + String.join(",\\\n  ", excludedAutoConfigs)));
 
-		if (loadedAutoConfigs.isEmpty()) {
-			lines.add(OptimizedAutoConfigurationImportFilter.LOADED_CONFIGURATIONS_KEY + "=");
-		}
-		else {
-			StringBuilder sb = new StringBuilder(
-					OptimizedAutoConfigurationImportFilter.LOADED_CONFIGURATIONS_KEY + "=\\\n");
-			for (int i = 0; i < loadedAutoConfigs.size(); i++) {
-				sb.append("  ").append(loadedAutoConfigs.get(i));
-				if (i < loadedAutoConfigs.size() - 1) {
-					sb.append(",\\\n");
-				}
+		writeAtomically(outputFile, lines);
+		log.info("Spring Boot Autoconfiguration Optimizer: Training file written to: {}", outputFile.toAbsolutePath());
+	}
+
+	/**
+	 * Writes via a temporary file in the same directory and renames it into place, so a
+	 * training run that dies midway cannot leave a truncated file that a later build
+	 * would happily package.
+	 */
+	private static void writeAtomically(Path outputFile, List<String> lines) throws IOException {
+		Path directory = outputFile.toAbsolutePath().getParent();
+		Path temporaryFile = Files.createTempFile(directory, outputFile.getFileName().toString(), ".tmp");
+		try {
+			Files.write(temporaryFile, lines, StandardCharsets.UTF_8);
+			try {
+				Files.move(temporaryFile, outputFile, StandardCopyOption.REPLACE_EXISTING,
+						StandardCopyOption.ATOMIC_MOVE);
 			}
-			lines.add(sb.toString());
+			catch (AtomicMoveNotSupportedException ex) {
+				Files.move(temporaryFile, outputFile, StandardCopyOption.REPLACE_EXISTING);
+			}
 		}
+		finally {
+			Files.deleteIfExists(temporaryFile);
+		}
+	}
 
-		Files.write(outputFile, lines, StandardCharsets.UTF_8);
-		log.atInfo()
-			.addArgument(() -> outputFile.toAbsolutePath())
-			.log("Spring Boot Autoconfiguration Optimizer: Training file written to: {}");
+	private static String springBootVersion() {
+		String version = SpringBootVersion.getVersion();
+		return (version != null) ? version : "unknown";
 	}
 
 }

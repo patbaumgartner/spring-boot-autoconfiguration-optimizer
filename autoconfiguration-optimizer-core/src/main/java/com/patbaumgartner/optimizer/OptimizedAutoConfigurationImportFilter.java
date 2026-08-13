@@ -3,33 +3,32 @@ package com.patbaumgartner.optimizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanClassLoaderAware;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurationImportFilter;
 import org.springframework.boot.autoconfigure.AutoConfigurationMetadata;
-import org.springframework.boot.context.annotation.ImportCandidates;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.core.env.Environment;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * An {@link AutoConfigurationImportFilter} that restricts auto-configuration candidates
- * to only those recorded during a training run.
+ * An {@link AutoConfigurationImportFilter} that skips the auto-configurations recorded as
+ * unused during a training run.
  *
  * <p>
  * This filter is activated when:
  * <ol>
  * <li>{@code autoconfiguration.optimizer.enabled} is {@code true} (default)</li>
  * <li>{@code autoconfiguration.optimizer.training-run} is {@code false} (default)</li>
- * <li>A file named {@code META-INF/autoconfiguration-optimizer.properties} exists on the
- * classpath</li>
+ * <li>A readable, current-format training file exists on the classpath at
+ * {@value TrainingFile#RESOURCE_LOCATION}</li>
  * </ol>
  *
  * <p>
@@ -40,33 +39,31 @@ import java.util.stream.Collectors;
  * <li>The list of auto-configuration candidates is loaded only once by Spring Boot (no
  * duplicate loading)</li>
  * <li>Filtering is done via efficient {@code boolean[]} operations on the candidate
- * string array — no comma-separated string building or environment manipulation</li>
+ * string array - no comma-separated string building or environment manipulation</li>
  * <li>The filter runs at the earliest possible point, before auto-configuration classes
  * are loaded or their conditions evaluated</li>
  * </ul>
  *
  * <p>
- * <strong>Important:</strong> In Spring Boot 4, {@code AutoConfigurationImportFilter} may
- * be invoked not only for the top-level candidates from {@code AutoConfiguration.imports}
- * files but also for configurations that are programmatically {@code @Import}ed by other
- * auto-configurations (for example, {@code DataSourceConfiguration.Hikari} imported by
- * {@code DataSourceAutoConfiguration.PooledDataSourceConfiguration}). Such programmatic
- * imports are <em>not</em> registered as auto-configuration candidates and are therefore
- * not captured during training. This filter only excludes configurations that appear in
- * the complete set of registered auto-configuration candidates; any configuration that is
- * not a registered candidate is passed through unconditionally.
+ * Because the training file records exclusions rather than inclusions, the filter never
+ * needs to know the full candidate set. Anything it was not explicitly told to skip is
+ * allowed, which covers both candidates introduced after training and the configurations
+ * Spring Boot imports programmatically (for example
+ * {@code DataSourceConfiguration$Hikari}), which are passed to import filters without
+ * being registered auto-configuration candidates.
+ *
+ * <p>
+ * Every failure mode - a missing file, an unreadable file, an unrecognised format
+ * version, or more than one training file on the classpath - degrades to allowing all
+ * auto-configurations, so a broken optimizer costs startup time rather than correctness.
  *
  * @see TrainingRunApplicationListener
- * @see AutoConfigurationOptimizerProperties
+ * @see TrainingFile
  */
 public class OptimizedAutoConfigurationImportFilter
 		implements AutoConfigurationImportFilter, BeanClassLoaderAware, EnvironmentAware {
 
 	private static final Logger log = LoggerFactory.getLogger(OptimizedAutoConfigurationImportFilter.class);
-
-	static final String OPTIMIZER_PROPERTIES_FILE = "META-INF/autoconfiguration-optimizer.properties";
-
-	static final String LOADED_CONFIGURATIONS_KEY = "autoconfiguration.optimizer.loaded-configurations";
 
 	private ClassLoader classLoader;
 
@@ -74,11 +71,7 @@ public class OptimizedAutoConfigurationImportFilter
 
 	private boolean initialized;
 
-	private Set<String> allowedConfigurations;
-
-	private boolean allCandidatesInitialized;
-
-	private Set<String> allCandidates;
+	private Set<String> excludedConfigurations;
 
 	@Override
 	public void setBeanClassLoader(ClassLoader classLoader) {
@@ -94,54 +87,39 @@ public class OptimizedAutoConfigurationImportFilter
 	public boolean[] match(String[] autoConfigurationClasses, AutoConfigurationMetadata autoConfigurationMetadata) {
 		boolean[] result = new boolean[autoConfigurationClasses.length];
 
-		if (!isFilterActive()) {
+		Set<String> excluded = isFilterActive() ? getExcludedConfigurations() : null;
+		if (excluded == null || excluded.isEmpty()) {
 			Arrays.fill(result, true);
 			return result;
 		}
 
-		Set<String> allowed = getAllowedConfigurations();
-		if (allowed == null) {
-			// No training file found — allow everything
-			Arrays.fill(result, true);
-			return result;
-		}
-
-		Set<String> all = getAllCandidates();
-		int filteredCount = 0;
+		int skipped = 0;
 		for (int i = 0; i < autoConfigurationClasses.length; i++) {
-			String config = autoConfigurationClasses[i];
-			// null means an earlier filter already removed this candidate; pass it
-			// through.
-			// Also pass through any configuration that is not a registered
-			// auto-configuration candidate (e.g., programmatically @Import-ed inner
-			// configurations such as DataSourceConfiguration$Hikari). Only exclude
-			// configurations that are registered candidates absent from the training set.
-			result[i] = config == null || allowed.contains(config) || !all.contains(config);
+			String candidate = autoConfigurationClasses[i];
+			// A null entry means an earlier filter already removed this candidate.
+			result[i] = candidate == null || !excluded.contains(candidate);
 			if (!result[i]) {
-				filteredCount++;
+				skipped++;
 			}
 		}
 
-		if (filteredCount > 0) {
-			log.info(
-					"Spring Boot Autoconfiguration Optimizer: Skipped {} of {} auto-configuration candidates not seen during training (training set: {} entries).",
-					filteredCount, autoConfigurationClasses.length, allowed.size());
+		if (skipped > 0) {
+			log.debug("Spring Boot Autoconfiguration Optimizer: Skipped {} of {} auto-configuration candidates.",
+					skipped, autoConfigurationClasses.length);
 		}
 
 		return result;
 	}
 
 	private boolean isFilterActive() {
-		if (environment == null) {
+		if (this.environment == null) {
 			return false;
 		}
-		boolean enabled = environment.getProperty("autoconfiguration.optimizer.enabled", Boolean.class, true);
-		boolean trainingRun = environment.getProperty("autoconfiguration.optimizer.training-run", Boolean.class, false);
-		if (!enabled) {
+		if (!this.environment.getProperty("autoconfiguration.optimizer.enabled", Boolean.class, true)) {
 			log.debug("Spring Boot Autoconfiguration Optimizer: Optimization disabled");
 			return false;
 		}
-		if (trainingRun) {
+		if (this.environment.getProperty("autoconfiguration.optimizer.training-run", Boolean.class, false)) {
 			log.debug("Spring Boot Autoconfiguration Optimizer: Skipping optimization (training run active)");
 			return false;
 		}
@@ -149,87 +127,90 @@ public class OptimizedAutoConfigurationImportFilter
 	}
 
 	/**
-	 * Returns the set of allowed auto-configuration class names from the training file,
-	 * loading it lazily on first access. Returns {@code null} when no training file is
+	 * Returns the auto-configuration class names to skip, loading the training file
+	 * lazily on first access. Returns {@code null} when no usable training file is
 	 * present, which causes the filter to allow all candidates.
+	 * @return the excluded class names, or {@code null} to disable filtering
 	 */
-	Set<String> getAllowedConfigurations() {
-		if (!initialized) {
-			allowedConfigurations = loadAllowedConfigurations();
-			initialized = true;
+	Set<String> getExcludedConfigurations() {
+		if (!this.initialized) {
+			this.excludedConfigurations = loadExcludedConfigurations();
+			this.initialized = true;
 		}
-		return allowedConfigurations;
+		return this.excludedConfigurations;
 	}
 
-	/**
-	 * Returns the complete set of registered auto-configuration candidate class names
-	 * (from all {@code AutoConfiguration.imports} files on the classpath), loading it
-	 * lazily on first access.
-	 *
-	 * <p>
-	 * This set is used to distinguish registered auto-configurations (which the filter
-	 * should consider for exclusion) from programmatically {@code @Import}ed
-	 * configurations that are not registered candidates (which must always be passed
-	 * through).
-	 */
-	Set<String> getAllCandidates() {
-		if (!allCandidatesInitialized) {
-			allCandidates = loadAllCandidates();
-			allCandidatesInitialized = true;
-		}
-		return allCandidates;
-	}
-
-	private Set<String> loadAllowedConfigurations() {
-		ClassLoader loader = this.classLoader != null ? this.classLoader
+	private Set<String> loadExcludedConfigurations() {
+		ClassLoader loader = (this.classLoader != null) ? this.classLoader
 				: Thread.currentThread().getContextClassLoader();
-		Resource resource = new ClassPathResource(OPTIMIZER_PROPERTIES_FILE, loader);
 
-		if (!resource.exists()) {
-			log.debug("Spring Boot Autoconfiguration Optimizer: No training file found at classpath:{}. "
-					+ "Running with all auto-configurations.", OPTIMIZER_PROPERTIES_FILE);
-			return null;
-		}
-
+		List<URL> resources;
 		try {
-			Properties props = new Properties();
-			try (var inputStream = resource.getInputStream()) {
-				props.load(inputStream);
-			}
-
-			String loadedConfigsValue = props.getProperty(LOADED_CONFIGURATIONS_KEY);
-
-			if (loadedConfigsValue == null || loadedConfigsValue.isBlank()) {
-				log.warn(
-						"Spring Boot Autoconfiguration Optimizer: Training file exists but contains no loaded configurations. "
-								+ "Running with all auto-configurations.");
-				return null;
-			}
-
-			Set<String> allowed = Arrays.stream(loadedConfigsValue.split(","))
-				.map(String::trim)
-				.filter(s -> !s.isEmpty())
-				// The optimizer's own auto-configuration is never needed in production;
-				// exclude it even if an older training file recorded it.
-				.filter(s -> !s.equals(AutoConfigurationOptimizerAutoConfiguration.class.getName()))
-				.collect(Collectors.toSet());
-
-			log.atDebug()
-				.addArgument(() -> allowed.size())
-				.log("Spring Boot Autoconfiguration Optimizer: Loaded {} allowed configurations from training file.");
-			return allowed;
+			resources = Collections.list(loader.getResources(TrainingFile.RESOURCE_LOCATION));
 		}
-		catch (IOException e) {
-			log.error("Spring Boot Autoconfiguration Optimizer: Failed to read training file, "
-					+ "running with all auto-configurations", e);
+		catch (IOException ex) {
+			log.error("Spring Boot Autoconfiguration Optimizer: Failed to look up classpath:{}, "
+					+ "running with all auto-configurations.", TrainingFile.RESOURCE_LOCATION, ex);
 			return null;
 		}
+
+		if (resources.isEmpty()) {
+			log.debug("Spring Boot Autoconfiguration Optimizer: No training file found at classpath:{}. "
+					+ "Running with all auto-configurations.", TrainingFile.RESOURCE_LOCATION);
+			return null;
+		}
+		if (resources.size() > 1) {
+			// Picking one arbitrarily would apply one application's exclusions to
+			// another, so refuse to optimize rather than guess.
+			log.warn("Spring Boot Autoconfiguration Optimizer: Found {} training files on the classpath ({}). "
+					+ "Exactly one is required; running with all auto-configurations.", resources.size(), resources);
+			return null;
+		}
+
+		URL resource = resources.get(0);
+		Properties properties = new Properties();
+		try (InputStream inputStream = resource.openStream()) {
+			properties.load(inputStream);
+		}
+		catch (IOException ex) {
+			log.error("Spring Boot Autoconfiguration Optimizer: Failed to read training file {}, "
+					+ "running with all auto-configurations.", resource, ex);
+			return null;
+		}
+
+		String formatVersion = properties.getProperty(TrainingFile.FORMAT_VERSION_KEY);
+		if (!String.valueOf(TrainingFile.FORMAT_VERSION).equals(formatVersion)) {
+			log.warn(
+					"Spring Boot Autoconfiguration Optimizer: Training file {} declares format version {} but this "
+							+ "optimizer requires version {}. Re-run the training goal; running with all "
+							+ "auto-configurations.",
+					resource, formatVersion, TrainingFile.FORMAT_VERSION);
+			return null;
+		}
+
+		Set<String> excluded = parseExcludedConfigurations(
+				properties.getProperty(TrainingFile.EXCLUDED_CONFIGURATIONS_KEY));
+		if (excluded.isEmpty()) {
+			log.info("Spring Boot Autoconfiguration Optimizer: Training file records no exclusions; "
+					+ "running with all auto-configurations.");
+		}
+		else {
+			log.info(
+					"Spring Boot Autoconfiguration Optimizer: Skipping {} auto-configurations that were not used "
+							+ "during the training run of {}.",
+					excluded.size(), properties.getProperty(TrainingFile.TRAINING_TIMESTAMP_KEY, "an earlier build"));
+		}
+		return excluded;
 	}
 
-	private Set<String> loadAllCandidates() {
-		ClassLoader loader = this.classLoader != null ? this.classLoader
-				: Thread.currentThread().getContextClassLoader();
-		return new HashSet<>(ImportCandidates.load(AutoConfiguration.class, loader).getCandidates());
+	private static Set<String> parseExcludedConfigurations(String value) {
+		if (value == null || value.isBlank()) {
+			return Set.of();
+		}
+		return Arrays.stream(value.split(","))
+			.map(String::trim)
+			.filter((entry) -> !entry.isEmpty())
+			.collect(Collectors.toUnmodifiableSet());
 	}
 
 }
