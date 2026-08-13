@@ -39,6 +39,9 @@
     <flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>
     <maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
     <maven.compiler.release>17</maven.compiler.release>
+    <!-- Spring MVC resolves @RequestParam/@PathVariable names reflectively; without this
+         the modules that do not inherit spring-boot-starter-parent fail at request time. -->
+    <maven.compiler.parameters>true</maven.compiler.parameters>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
