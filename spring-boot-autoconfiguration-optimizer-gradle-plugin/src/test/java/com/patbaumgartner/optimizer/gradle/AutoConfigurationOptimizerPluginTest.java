@@ -73,7 +73,7 @@ class AutoConfigurationOptimizerPluginTest {
     }
 
     @Test
-    void pluginNoLongerRegistersAnInjectTask() throws IOException {
+    void pluginDoesNotRegisterAnInjectTask() throws IOException {
         Files.writeString(projectDir.resolve("build.gradle"), """
                 plugins {
                     id 'java'

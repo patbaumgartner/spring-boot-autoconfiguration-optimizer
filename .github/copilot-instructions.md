@@ -71,9 +71,10 @@ mvn io.spring.javaformat:spring-javaformat-maven-plugin:apply -pl autoconfigurat
 ### Gradle plugin
 
 ```bash
-# First install parent + core to mavenLocal so the Gradle build can find them
+# The Gradle plugin resolves build-support from mavenLocal, and the Gradle sample
+# resolves the core from there too, so install both first
 mvn install -DskipTests -q -N
-mvn install -DskipTests -q -pl autoconfiguration-optimizer-core
+mvn install -DskipTests -q -pl autoconfiguration-optimizer-core,autoconfiguration-optimizer-build-support
 
 # Then build/test the Gradle plugin
 cd spring-boot-autoconfiguration-optimizer-gradle-plugin
