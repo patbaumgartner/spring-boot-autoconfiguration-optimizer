@@ -59,10 +59,6 @@ import java.util.concurrent.TimeUnit;
 		requiresDependencyResolution = ResolutionScope.TEST, requiresProject = true, threadSafe = true)
 public class TrainMojo extends AbstractMojo {
 
-	static final String CORE_GROUP_ID = "com.patbaumgartner";
-
-	static final String CORE_ARTIFACT_ID = "autoconfiguration-optimizer-core";
-
 	/**
 	 * The Maven project.
 	 */
@@ -140,7 +136,7 @@ public class TrainMojo extends AbstractMojo {
 			return;
 		}
 
-		requireCoreOnProjectClasspath();
+		warnOnCoreVersionMismatch(OptimizerCoreDependency.require(project, pluginVersion));
 
 		getLog().info("Spring Boot Autoconfiguration Optimizer: Starting training run...");
 
@@ -293,37 +289,10 @@ public class TrainMojo extends AbstractMojo {
 		getLog().info("Spring Boot Autoconfiguration Optimizer: Copied training file to: " + targetFile);
 	}
 
-	/**
-	 * Fails unless the optimizer core is a dependency of the project being built.
-	 *
-	 * <p>
-	 * Without it the training run cannot record anything, and - more importantly - the
-	 * packaged application would not contain the import filter, so the generated training
-	 * file would be silently ignored at runtime and the build would look successful while
-	 * optimizing nothing.
-	 */
-	private void requireCoreOnProjectClasspath() throws MojoFailureException {
-		Artifact core = project.getArtifacts()
-			.stream()
-			.filter((artifact) -> CORE_GROUP_ID.equals(artifact.getGroupId())
-					&& CORE_ARTIFACT_ID.equals(artifact.getArtifactId()))
-			.filter((artifact) -> !Artifact.SCOPE_TEST.equals(artifact.getScope())
-					&& !Artifact.SCOPE_PROVIDED.equals(artifact.getScope()))
-			.findFirst()
-			.orElse(null);
-
-		if (core == null) {
-			throw new MojoFailureException("Spring Boot Autoconfiguration Optimizer: " + CORE_ARTIFACT_ID
-					+ " is not on the project's runtime classpath. The optimizer needs it at runtime to filter "
-					+ "auto-configurations, so add it to your pom.xml:\n\n" + "        <dependency>\n"
-					+ "            <groupId>" + CORE_GROUP_ID + "</groupId>\n" + "            <artifactId>"
-					+ CORE_ARTIFACT_ID + "</artifactId>\n" + "            <version>" + pluginVersion + "</version>\n"
-					+ "            <scope>runtime</scope>\n" + "        </dependency>\n");
-		}
-
+	private void warnOnCoreVersionMismatch(Artifact core) {
 		if (pluginVersion != null && !pluginVersion.equals(core.getVersion())) {
 			getLog().warn("Spring Boot Autoconfiguration Optimizer: This plugin is version " + pluginVersion
-					+ " but the project depends on " + CORE_ARTIFACT_ID + " " + core.getVersion()
+					+ " but the project depends on " + OptimizerCoreDependency.ARTIFACT_ID + " " + core.getVersion()
 					+ ". They are released together and are expected to match.");
 		}
 	}
