@@ -7,7 +7,7 @@
 ### How It Works
 
 1. **Training run**: The app starts once with `autoconfiguration.optimizer.training-run=true`. `TrainingRunApplicationListener` reads `ConditionEvaluationReport` and writes the auto-configs that did **not** apply to `META-INF/autoconfiguration-optimizer.properties`.
-2. **Inject**: The Maven/Gradle plugin embeds the optimizer core classes (including the filter and the training file) directly into the Spring Boot fat JAR via `CoreInjector`.
+2. **Depend on the core**: `autoconfiguration-optimizer-core` is an ordinary runtime dependency of the application. The Gradle plugin adds it to `runtimeOnly` automatically; Maven requires an explicit declaration and the `train` goal fails with the exact XML when it is missing.
 3. **Production run**: `OptimizedAutoConfigurationImportFilter` reads the properties file and skips exactly the recorded auto-configurations. Anything not recorded is allowed.
 
 ---
@@ -18,8 +18,8 @@
 spring-boot-autoconfiguration-optimizer/
 ├── autoconfiguration-optimizer-core/          # Core library (filter, listener, training file format)
 ├── autoconfiguration-optimizer-build-support/ # Shared build-time code used by both plugins
-├── spring-boot-autoconfiguration-optimizer-maven-plugin/  # Maven plugin (train + inject goals)
-├── spring-boot-autoconfiguration-optimizer-gradle-plugin/ # Gradle plugin (trainOptimizer + injectOptimizerCore tasks)
+├── spring-boot-autoconfiguration-optimizer-maven-plugin/  # Maven plugin (train + verify goals)
+├── spring-boot-autoconfiguration-optimizer-gradle-plugin/ # Gradle plugin (train + copy tasks)
 ├── integration-tests/
 │   ├── petclinic-sample/                      # Maven integration test (PetClinic-like app)
 │   └── petclinic-sample-gradle/               # Gradle integration test (shares sources)
@@ -38,9 +38,8 @@ spring-boot-autoconfiguration-optimizer/
 | `TrainingRunApplicationListener` | core | Captures matched auto-configs during training run and writes properties file |
 | `AutoConfigurationOptimizerProperties` | core | `@ConfigurationProperties(prefix="autoconfiguration.optimizer")` |
 | `TrainingFile` | core | On-disk format contract: keys, format version, candidate digest |
-| `CoreInjector` | build-support | Finds the core JAR via `ProtectionDomain`, extracts and merges it into the build output |
 | `TrainMojo` / `TrainTask` | maven / gradle | Forks a training run JVM process |
-| `InjectMojo` / `InjectTask` | maven / gradle | Invokes `CoreInjector` to embed the core into the classes directory |
+| `VerifyMojo` | maven | Fails the build when the training file is missing or no longer matches the classpath |
 | `MainClassFinder` | build-support | Scans bytecode for `@SpringBootApplication` to auto-detect the main class |
 | `AutoConfigurationCandidates` | build-support | Reads candidates off a classpath without starting an app (used by `verify`) |
 | `AutoConfigurationOptimizerPlugin` | gradle | Gradle plugin entry point; wires tasks to `bootJar`, `bootWar`, `resolveMainClassName` |
@@ -131,21 +130,20 @@ Gradle 9 `validatePlugins` requires:
 - Every task must be annotated with `@DisableCachingByDefault` or `@CacheableTask`.
 - Every `@InputFile` / `@InputFiles` property must also carry `@PathSensitive` / `@Classpath` / `@CompileClasspath`.
 
-### Core injection mechanism
+### The core is a declared dependency, never injected
 
-`CoreInjector` locates the core JAR via `OptimizedAutoConfigurationImportFilter.class.getProtectionDomain().getCodeSource().getLocation()`, then extracts all `.class` files and resource files into the project build output directory, carefully merging `spring.factories` and `AutoConfiguration.imports` rather than overwriting them.
+Earlier versions copied the core's classes and Spring metadata into the application's build output so no dependency had to be declared. **Do not reintroduce that.** It hid the optimizer from the dependency graph and therefore from SBOM, licence and vulnerability tooling; it left stale classes behind when the plugin was upgraded, because entries were only copied when absent; it copied the core's own `META-INF/maven/**` into the consumer's artifact; and it silently required the core to have no dependencies, since only its classes travelled.
 
-Rules that exist because breaking them caused real defects:
+- Gradle: `AutoConfigurationOptimizerPlugin` adds the core to `runtimeOnly`. The version is read from `optimizer.properties`, generated into the plugin JAR by `build.gradle`, so it always matches the plugin. `coreVersion` on the extension overrides it.
+- Maven: a plugin cannot contribute a dependency to the project building it without mutating the model, so `TrainMojo` fails with copy-pasteable XML and warns on a version mismatch.
 
-- Entries under `com/patbaumgartner/optimizer/` are **owned** by the plugin and must be overwritten, or upgrading the plugin leaves classes from the previous core version in the build output. Everything else must never clobber a file the application produced.
-- `META-INF/maven/**` must be skipped, or the consumer's artifact reports itself as `autoconfiguration-optimizer-core` to anything reading Maven provenance.
-- Never write merged `spring.factories` with `Properties.store`: it escapes the backslash of an embedded line continuation, and the value is read back as a class name starting with a literal backslash.
-
-Because the plugins copy the core's classes **without its dependencies**, `autoconfiguration-optimizer-core` may only depend on artifacts every Spring Boot application already has. A `maven-enforcer-plugin` rule in that module enforces this.
+The core is still kept dependency-light by a `maven-enforcer-plugin` rule, because it ships into applications whose Spring Boot version it must not conflict with.
 
 ### Gradle plugin task wiring
 
-`AutoConfigurationOptimizerPlugin` wires three Spring Boot tasks to depend on `injectOptimizerCore`: `bootJar`, `bootWar` (guarded by `project.plugins.withId("war")`), and `resolveMainClassName`. The `injectOptimizerCore` task in turn depends on `trainOptimizer`, which in turn depends on `jar`.
+The chain is `trainAutoconfiguration` -> `copyAutoconfigurationOptimizerFile` -> `jar`/`bootJar`. `bootJar`, `bootWar` (guarded by `project.plugins.withId("war")`) and `resolveMainClassName` all depend on the copy task; Spring Boot's archive tasks do not depend on `jar`, and `resolveMainClassName` scans the directory the copy task writes into, so Gradle fails the build if that ordering is not declared.
+
+`copyAutoconfigurationOptimizerFile` must stay a real `Copy` task. An ad-hoc task with a `doLast` block that touches the `Project` cannot be serialized into the configuration cache, which Gradle 9 enables by default, and made `bootJar` fail outright for every consumer.
 
 ---
 

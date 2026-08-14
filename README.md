@@ -19,7 +19,7 @@ The result: fewer condition evaluations, faster startup, and zero changes to you
 ## How It Works
 
 1. **Training Run**: Start your application once with training mode enabled. The optimizer records every registered auto-configuration that did **not** apply and writes that list to `META-INF/autoconfiguration-optimizer.properties`. Commit this file so it is baked into subsequent builds. **This step is required to get any optimization benefit** - without the training file, the optimizer is a no-op.
-2. **Inject**: Add the plugin to your build. The `inject` goal/task automatically embeds the optimizer core into your packaged JAR. No separate dependency declaration is needed.
+2. **Depend on the core**: The `autoconfiguration-optimizer-core` library contains the filter that reads the file. Gradle users get it automatically; Maven users declare it once (see below).
 3. **Subsequent Starts**: An `AutoConfigurationImportFilter` reads the file at startup and skips exactly those auto-configurations, so Spring Boot never loads them or evaluates their conditions.
 4. **Safe by Default**: A missing, unreadable, or unrecognised training file means no filtering at all, and the application starts exactly as it would without the optimizer.
 
@@ -83,7 +83,18 @@ The actual improvement depends on how many Spring Boot starters your application
 
 ### Maven
 
-Add the plugin to your `pom.xml`. The `inject` goal embeds the optimizer core into your packaged JAR with no explicit core dependency needed. Then run the `train` goal once to generate the optimizer properties file:
+Declare the core as a runtime dependency, then add the plugin. A Maven plugin cannot contribute a dependency to the project building it, so this one declaration is required - the `train` goal fails with the exact XML if it is missing.
+
+```xml
+<dependency>
+    <groupId>com.patbaumgartner</groupId>
+    <artifactId>autoconfiguration-optimizer-core</artifactId>
+    <version>1.0.0</version>
+    <scope>runtime</scope>
+</dependency>
+```
+
+The `train` goal generates the optimizer properties file, and `verify` fails the build if it goes stale:
 
 ```xml
 <plugin>
@@ -94,7 +105,7 @@ Add the plugin to your `pom.xml`. The `inject` goal embeds the optimizer core in
         <execution>
             <goals>
                 <goal>train</goal>
-                <goal>inject</goal>
+                <goal>verify</goal>
             </goals>
         </execution>
     </executions>
@@ -127,7 +138,7 @@ Re-run training whenever your application's dependencies change significantly.
 
 ### Gradle
 
-Apply the plugin: the optimizer core is automatically injected into your `bootJar` output:
+Apply the plugin. It adds `autoconfiguration-optimizer-core` to your `runtimeOnly` configuration at a matching version, so there is nothing else to declare:
 
 ```groovy
 plugins {
@@ -152,7 +163,7 @@ Run the training step (automatically wired into `jar`/`bootJar`):
 ```bash
 ./gradlew bootJar
 
-# Training, copy, and inject tasks run automatically before packaging
+# The training and copy tasks run automatically before packaging
 # Generates build/classes/java/main/META-INF/autoconfiguration-optimizer.properties
 ```
 
@@ -203,6 +214,7 @@ Re-run training whenever your application's dependencies change significantly.
 | `targetDirectory` | `build/classes/java/main/META-INF` | Directory where the properties file is copied after training. |
 | `outputFile` | `autoconfiguration-optimizer.properties` | Name of the generated properties file. |
 | `skip` | `false` | Skip the training run. |
+| `coreVersion` | the plugin's version | Version of `autoconfiguration-optimizer-core` added to `runtimeOnly`. |
 
 ## Spring Boot Compatibility
 
