@@ -36,7 +36,7 @@ Thank you for your interest in contributing! Here's how to get started.
 - **Maven tests**: `mvn test`
 - **Gradle plugin tests**: `cd spring-boot-autoconfiguration-optimizer-gradle-plugin && ./gradlew test`
 - **End-to-end**: the sample applications under `integration-tests/` are not part of the root
-  reactor and must be run separately. They exercise the full train → inject → package cycle and
+  reactor and must be run separately. They exercise the full train → package cycle and
   then drive the packaged application over HTTP:
   ```bash
   mvn install -DskipTests -pl spring-boot-autoconfiguration-optimizer-maven-plugin -am
