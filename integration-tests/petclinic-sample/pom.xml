@@ -19,6 +19,14 @@
   </properties>
 
   <dependencies>
+    <!-- Reads the training file and filters auto-configurations at startup. The Maven
+         plugin cannot add this for you, so it must be declared explicitly. -->
+    <dependency>
+      <groupId>com.patbaumgartner</groupId>
+      <artifactId>autoconfiguration-optimizer-core</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
     <!-- Spring Boot Web + Thymeleaf (as in PetClinic) -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -88,7 +96,7 @@
           <execution>
             <goals>
               <goal>train</goal>
-              <goal>inject</goal>
+              <goal>verify</goal>
             </goals>
           </execution>
         </executions>

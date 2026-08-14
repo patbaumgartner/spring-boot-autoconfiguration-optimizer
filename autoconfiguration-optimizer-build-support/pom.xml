@@ -14,16 +14,6 @@
   <description>Build-tool agnostic support code shared by the Maven and Gradle plugins</description>
 
   <dependencies>
-    <!--
-      Needed to locate the core JAR on the plugin classpath via its ProtectionDomain.
-      This module is a build-time dependency of the plugins only; it is never part of a
-      consumer application's runtime classpath.
-    -->
-    <dependency>
-      <groupId>com.patbaumgartner</groupId>
-      <artifactId>autoconfiguration-optimizer-core</artifactId>
-    </dependency>
-
     <!-- Test dependencies -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>

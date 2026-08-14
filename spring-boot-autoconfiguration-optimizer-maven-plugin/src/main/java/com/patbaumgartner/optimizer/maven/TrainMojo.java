@@ -1,7 +1,7 @@
 package com.patbaumgartner.optimizer.maven;
 
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DependencyResolutionRequiredException;
-import com.patbaumgartner.optimizer.build.CoreInjector;
 import com.patbaumgartner.optimizer.build.MainClassFinder;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -59,11 +59,21 @@ import java.util.concurrent.TimeUnit;
 		requiresDependencyResolution = ResolutionScope.TEST, requiresProject = true, threadSafe = true)
 public class TrainMojo extends AbstractMojo {
 
+	static final String CORE_GROUP_ID = "com.patbaumgartner";
+
+	static final String CORE_ARTIFACT_ID = "autoconfiguration-optimizer-core";
+
 	/**
 	 * The Maven project.
 	 */
 	@Parameter(defaultValue = "${project}", readonly = true, required = true)
 	private MavenProject project;
+
+	/**
+	 * This plugin's own version, used to report the matching core version.
+	 */
+	@Parameter(defaultValue = "${plugin.version}", readonly = true)
+	private String pluginVersion;
 
 	/**
 	 * The main class to run. If not specified, it will be auto-detected from the Spring
@@ -130,6 +140,8 @@ public class TrainMojo extends AbstractMojo {
 			return;
 		}
 
+		requireCoreOnProjectClasspath();
+
 		getLog().info("Spring Boot Autoconfiguration Optimizer: Starting training run...");
 
 		// Validate the output file name to prevent path traversal: it must be a simple
@@ -175,11 +187,6 @@ public class TrainMojo extends AbstractMojo {
 
 			// Copy to target directory
 			copyToTargetDirectory(outputFilePath);
-
-			// Inject core classes and resources into the build output directory so the
-			// optimizer works at runtime without requiring the core as a project
-			// dependency
-			injectCoreFiles();
 
 			getLog().info("Spring Boot Autoconfiguration Optimizer: Training run complete. "
 					+ "Properties file copied to: " + targetDirectory);
@@ -250,13 +257,6 @@ public class TrainMojo extends AbstractMojo {
 			throw new MojoExecutionException("Failed to resolve the project's runtime classpath", ex);
 		}
 
-		// Always include the optimizer core JAR so training works without the user
-		// declaring it as a project dependency
-		Path coreJar = CoreInjector.findCoreJar();
-		if (coreJar != null && !classpathEntries.contains(coreJar.toString())) {
-			classpathEntries.add(coreJar.toString());
-		}
-
 		return String.join(File.pathSeparator, classpathEntries);
 	}
 
@@ -293,22 +293,38 @@ public class TrainMojo extends AbstractMojo {
 		getLog().info("Spring Boot Autoconfiguration Optimizer: Copied training file to: " + targetFile);
 	}
 
-	private void injectCoreFiles() throws MojoExecutionException {
-		Path coreJar = CoreInjector.findCoreJar();
-		if (coreJar == null) {
-			getLog().debug(
-					"Spring Boot Autoconfiguration Optimizer: Core JAR not found as a file (running from directory). "
-							+ "Skipping core injection.");
-			return;
+	/**
+	 * Fails unless the optimizer core is a dependency of the project being built.
+	 *
+	 * <p>
+	 * Without it the training run cannot record anything, and - more importantly - the
+	 * packaged application would not contain the import filter, so the generated training
+	 * file would be silently ignored at runtime and the build would look successful while
+	 * optimizing nothing.
+	 */
+	private void requireCoreOnProjectClasspath() throws MojoFailureException {
+		Artifact core = project.getArtifacts()
+			.stream()
+			.filter((artifact) -> CORE_GROUP_ID.equals(artifact.getGroupId())
+					&& CORE_ARTIFACT_ID.equals(artifact.getArtifactId()))
+			.filter((artifact) -> !Artifact.SCOPE_TEST.equals(artifact.getScope())
+					&& !Artifact.SCOPE_PROVIDED.equals(artifact.getScope()))
+			.findFirst()
+			.orElse(null);
+
+		if (core == null) {
+			throw new MojoFailureException("Spring Boot Autoconfiguration Optimizer: " + CORE_ARTIFACT_ID
+					+ " is not on the project's runtime classpath. The optimizer needs it at runtime to filter "
+					+ "auto-configurations, so add it to your pom.xml:\n\n" + "        <dependency>\n"
+					+ "            <groupId>" + CORE_GROUP_ID + "</groupId>\n" + "            <artifactId>"
+					+ CORE_ARTIFACT_ID + "</artifactId>\n" + "            <version>" + pluginVersion + "</version>\n"
+					+ "            <scope>runtime</scope>\n" + "        </dependency>\n");
 		}
-		Path outputDir = Path.of(project.getBuild().getOutputDirectory());
-		try {
-			CoreInjector.injectCoreJarContents(coreJar, outputDir);
-			getLog()
-				.info("Spring Boot Autoconfiguration Optimizer: Core classes injected into build output: " + outputDir);
-		}
-		catch (IOException ex) {
-			throw new MojoExecutionException("Failed to inject optimizer core classes into build output", ex);
+
+		if (pluginVersion != null && !pluginVersion.equals(core.getVersion())) {
+			getLog().warn("Spring Boot Autoconfiguration Optimizer: This plugin is version " + pluginVersion
+					+ " but the project depends on " + CORE_ARTIFACT_ID + " " + core.getVersion()
+					+ ". They are released together and are expected to match.");
 		}
 	}
 

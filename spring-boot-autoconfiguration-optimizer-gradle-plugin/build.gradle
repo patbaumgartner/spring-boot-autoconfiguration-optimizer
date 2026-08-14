@@ -23,9 +23,8 @@ dependencies {
     implementation gradleApi()
     // The plugin and the core are versioned and released together, so the plugin's own
     // version is the single source of truth. Overriding it (-Pversion=x.y.z) therefore
-    // moves both, and a snapshot build resolves the core from the reactor via mavenLocal
-    // instead of silently testing against the last release.
-    implementation "com.patbaumgartner:autoconfiguration-optimizer-core:${version}"
+    // moves both, and a snapshot build resolves build-support from the reactor via
+    // mavenLocal instead of silently testing against the last release.
     implementation "com.patbaumgartner:autoconfiguration-optimizer-build-support:${version}"
 
     testImplementation gradleTestKit()
@@ -34,6 +33,19 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'org.assertj:assertj-core:3.27.7'
 }
+
+// The plugin adds autoconfiguration-optimizer-core to the projects it is applied to, so
+// it has to know which version to add. Baking it into the JAR keeps the two aligned
+// without the plugin depending on the core itself.
+def optimizerVersionProperties = tasks.register('optimizerVersionProperties', WriteProperties) {
+    destinationFile = layout.buildDirectory
+            .file('generated-resources/com/patbaumgartner/optimizer/gradle/optimizer.properties')
+    property('core.version', providers.provider { project.version.toString() })
+}
+
+sourceSets.main.output.dir(
+        layout.buildDirectory.dir('generated-resources'),
+        builtBy: optimizerVersionProperties)
 
 test {
     useJUnitPlatform()
