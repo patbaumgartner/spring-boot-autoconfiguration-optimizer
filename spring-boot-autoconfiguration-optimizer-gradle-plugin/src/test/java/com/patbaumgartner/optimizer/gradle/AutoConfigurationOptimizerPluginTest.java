@@ -40,7 +40,40 @@ class AutoConfigurationOptimizerPluginTest {
     }
 
     @Test
-    void pluginRegistersInjectTask() throws IOException {
+    void pluginAddsTheOptimizerCoreToTheRuntimeClasspath() throws IOException {
+        Files.writeString(projectDir.resolve("build.gradle"), """
+                plugins {
+                    id 'java'
+                    id 'com.patbaumgartner.autoconfiguration-optimizer'
+                }
+                repositories {
+                    mavenLocal()
+                    mavenCentral()
+                }
+                tasks.register('printRuntimeDependencies') {
+                    def coordinates = configurations.runtimeClasspath.allDependencies.collect {
+                        "${it.group}:${it.name}:${it.version}"
+                    }
+                    doLast { coordinates.each { println "runtime-dependency: ${it}" } }
+                }
+                """);
+
+        Files.writeString(projectDir.resolve("settings.gradle"), """
+                rootProject.name = 'test-project'
+                """);
+
+        BuildResult result = GradleRunner.create()
+                .withProjectDir(projectDir.toFile())
+                .withArguments("printRuntimeDependencies")
+                .withPluginClasspath()
+                .build();
+
+        assertThat(result.getOutput())
+                .contains("runtime-dependency: com.patbaumgartner:autoconfiguration-optimizer-core:");
+    }
+
+    @Test
+    void pluginNoLongerRegistersAnInjectTask() throws IOException {
         Files.writeString(projectDir.resolve("build.gradle"), """
                 plugins {
                     id 'java'
@@ -58,7 +91,7 @@ class AutoConfigurationOptimizerPluginTest {
                 .withPluginClasspath()
                 .build();
 
-        assertThat(result.getOutput()).contains("injectOptimizerCore");
+        assertThat(result.getOutput()).doesNotContain("injectOptimizerCore");
     }
 
     @Test
@@ -88,7 +121,7 @@ class AutoConfigurationOptimizerPluginTest {
     }
 
     @Test
-    void bootJarDependsOnInjectTask() throws IOException {
+    void bootJarDependsOnTheTrainingFileCopy() throws IOException {
         // Minimal settings that pull Spring Boot from Gradle Plugin Portal
         Files.writeString(projectDir.resolve("settings.gradle"), """
                 pluginManagement {
@@ -107,6 +140,7 @@ class AutoConfigurationOptimizerPluginTest {
                     id 'com.patbaumgartner.autoconfiguration-optimizer'
                 }
                 repositories {
+                    mavenLocal()
                     mavenCentral()
                 }
                 """);
@@ -117,6 +151,6 @@ class AutoConfigurationOptimizerPluginTest {
                 .withPluginClasspath()
                 .build();
 
-        assertThat(result.getOutput()).contains(":injectOptimizerCore");
+        assertThat(result.getOutput()).contains(":copyAutoconfigurationOptimizerFile");
     }
 }

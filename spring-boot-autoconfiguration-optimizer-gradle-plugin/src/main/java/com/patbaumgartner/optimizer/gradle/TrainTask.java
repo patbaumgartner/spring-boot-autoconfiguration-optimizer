@@ -1,6 +1,5 @@
 package com.patbaumgartner.optimizer.gradle;
 
-import com.patbaumgartner.optimizer.build.CoreInjector;
 import com.patbaumgartner.optimizer.build.MainClassFinder;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
@@ -172,10 +171,6 @@ public abstract class TrainTask extends DefaultTask {
 
         getLogger().lifecycle("Spring Boot Autoconfiguration Optimizer: Training run complete. "
                 + "Generated: {}", outputFilePath);
-
-        // Inject core classes into the main output so the optimizer works at runtime
-        // without requiring the core as a project dependency
-        injectCoreFiles();
     }
 
     /**
@@ -186,33 +181,6 @@ public abstract class TrainTask extends DefaultTask {
         process.descendants().forEach(ProcessHandle::destroyForcibly);
         process.destroyForcibly();
         process.waitFor(10, TimeUnit.SECONDS);
-    }
-
-    private void injectCoreFiles() {
-        Path coreJar = CoreInjector.findCoreJar();
-        if (coreJar == null) {
-            getLogger().debug(
-                    "Spring Boot Autoconfiguration Optimizer: Core JAR not found as a file. Skipping core injection.");
-            return;
-        }
-        // Inject into each classes directory configured for this task
-        boolean injected = false;
-        for (Path dir : resolveClassesDirectoriesForScan()) {
-            if (Files.isDirectory(dir)) {
-                try {
-                    CoreInjector.injectCoreJarContents(coreJar, dir);
-                    getLogger().lifecycle(
-                            "Spring Boot Autoconfiguration Optimizer: Core classes injected into: {}", dir);
-                    injected = true;
-                } catch (IOException ex) {
-                    throw new GradleException("Failed to inject optimizer core classes into " + dir, ex);
-                }
-            }
-        }
-        if (!injected) {
-            getLogger().debug(
-                    "Spring Boot Autoconfiguration Optimizer: No classes directories found for core injection.");
-        }
     }
 
     private List<String> buildCommand(Path workDir, String outputFileName) {
@@ -268,10 +236,9 @@ public abstract class TrainTask extends DefaultTask {
     }
 
     /**
-     * Builds the classpath for the training subprocess. Always includes the
-     * optimizer
-     * core JAR so training works without the user declaring it as a project
-     * dependency.
+     * Builds the classpath for the training subprocess. The optimizer core reaches it
+     * through the project's own runtime classpath, so the training run sees exactly what
+     * the packaged application will.
      */
     private String buildClasspath() {
         List<String> entries = new ArrayList<>();
@@ -280,13 +247,6 @@ public abstract class TrainTask extends DefaultTask {
             getRuntimeClasspath().get().stream()
                     .map(File::getAbsolutePath)
                     .forEach(entries::add);
-        }
-
-        // Always include the optimizer core so the TrainingRunApplicationListener is
-        // available without requiring the user to add it as a project dependency
-        Path coreJar = CoreInjector.findCoreJar();
-        if (coreJar != null && !entries.contains(coreJar.toString())) {
-            entries.add(coreJar.toString());
         }
 
         return entries.stream().collect(Collectors.joining(File.pathSeparator));

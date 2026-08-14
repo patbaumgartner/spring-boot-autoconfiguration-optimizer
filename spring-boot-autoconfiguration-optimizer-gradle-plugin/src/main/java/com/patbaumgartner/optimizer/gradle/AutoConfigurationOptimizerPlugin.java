@@ -15,22 +15,17 @@ import java.io.File;
  * <p>
  * This plugin adds the following tasks:
  * <ul>
- * <li>{@code trainAutoconfiguration} - Runs the application in training mode to
- * detect
+ * <li>{@code trainAutoconfiguration} - Runs the application in training mode to detect
  * which auto-configurations are loaded</li>
- * <li>{@code injectOptimizerCore} - Injects the optimizer core classes into the
- * build
- * output before the {@code jar} task runs</li>
+ * <li>{@code copyAutoconfigurationOptimizerFile} - Copies the generated training file
+ * into the build output before the {@code jar} or {@code bootJar} task runs</li>
  * </ul>
  *
  * <p>
- * The {@code autoconfiguration-optimizer-core} JAR is automatically added to
- * the
- * training subprocess classpath, so users do <em>not</em> need to declare it as
- * a project
- * dependency. After training the core classes are also injected into the main
- * output
- * directory so they are included in the packaged JAR.
+ * When the {@code java} plugin is applied, {@code autoconfiguration-optimizer-core} is
+ * added to the {@code runtimeOnly} configuration at the version this plugin was built
+ * with, so the packaged application contains the import filter that reads the training
+ * file. Set {@code coreVersion} on the extension to override it.
  *
  * <p>
  * Usage in {@code build.gradle}:
@@ -57,11 +52,13 @@ public class AutoConfigurationOptimizerPlugin implements Plugin<Project> {
     /** The name of the training task registered by this plugin. */
     public static final String TRAIN_TASK_NAME = "trainAutoconfiguration";
 
-    /** The name of the core-injection task registered by this plugin. */
-    public static final String INJECT_TASK_NAME = "injectOptimizerCore";
+    /** The name of the task that copies the generated training file into the build output. */
+    public static final String COPY_TASK_NAME = "copyAutoconfigurationOptimizerFile";
 
     /** The task group under which all plugin tasks are listed. */
     public static final String TASK_GROUP = "autoconfiguration optimizer";
+
+    private static final String OPTIMIZER_CORE_COORDINATES = "com.patbaumgartner:autoconfiguration-optimizer-core:";
 
     @Override
     public void apply(Project project) {
@@ -74,6 +71,7 @@ public class AutoConfigurationOptimizerPlugin implements Plugin<Project> {
         extension.getSkip().convention(false);
         extension.getTargetDirectory().convention(
                 project.getLayout().getBuildDirectory().dir("classes/java/main/META-INF"));
+        extension.getCoreVersion().convention(OptimizerCoreVersion.get());
 
         TaskProvider<TrainTask> trainTask = project.getTasks().register(TRAIN_TASK_NAME, TrainTask.class, task -> {
             task.setGroup(TASK_GROUP);
@@ -103,7 +101,7 @@ public class AutoConfigurationOptimizerPlugin implements Plugin<Project> {
         // A built-in Copy task rather than a doLast block: an ad-hoc task that reaches
         // back to the Project at execution time cannot be serialized into Gradle's
         // configuration cache, which is enabled by default from Gradle 9.
-        TaskProvider<Copy> copyTask = project.getTasks().register("copyAutoconfigurationOptimizerFile", Copy.class,
+        TaskProvider<Copy> copyTask = project.getTasks().register(COPY_TASK_NAME, Copy.class,
                 task -> {
                     task.setGroup(TASK_GROUP);
                     task.setDescription(
@@ -115,8 +113,10 @@ public class AutoConfigurationOptimizerPlugin implements Plugin<Project> {
 
         // If the Java plugin is applied, automatically configure classesDirectories
         // so the main class can be auto-detected without any additional configuration,
-        // and wire the train/copy/inject tasks to run before jar
+        // and wire the train/copy tasks to run before jar
         project.getPlugins().withId("java", javaPlugin -> {
+            addOptimizerCoreDependency(project, extension);
+
             trainTask.configure(task -> {
                 task.dependsOn("classes");
                 JavaPluginExtension javaExtension = project.getExtensions().findByType(JavaPluginExtension.class);
@@ -131,33 +131,31 @@ public class AutoConfigurationOptimizerPlugin implements Plugin<Project> {
                 }
             });
 
-            // Register the inject task and wire it to run before 'jar'
-            project.getTasks().register(INJECT_TASK_NAME, InjectTask.class, task -> {
-                task.setGroup(TASK_GROUP);
-                task.setDescription("Injects optimizer core classes into the build output before packaging.");
+            project.getTasks().named("jar").configure(jar -> jar.dependsOn(copyTask));
 
-                // Point the output directory at the first classes dir for the main source set
-                task.getOutputDirectory().set(
-                        project.getLayout().getBuildDirectory().dir("classes/java/main"));
-            });
-
-            // Build the dependency chain: train -> copy -> inject -> jar/bootJar
-            // This ensures the training properties file and core classes are all in
-            // the build output before the JAR is assembled.
-            project.getTasks().named(INJECT_TASK_NAME).configure(task -> task.dependsOn(copyTask));
-            project.getTasks().named("jar").configure(jar -> jar.dependsOn(INJECT_TASK_NAME));
-
-            // Make 'bootJar' and 'bootWar' depend on 'injectOptimizerCore' as well.
             // Spring Boot fat archives are produced by their own tasks that do NOT
             // depend on the regular 'jar' task, so they must be wired independently.
-            // 'resolveMainClassName' also scans the classes directory written by
-            // 'injectOptimizerCore', so it must be declared as a dependant too.
+            // 'resolveMainClassName' scans the same classes directory the copy task
+            // writes into, so Gradle rejects the build unless that ordering is declared.
             project.getPlugins().withId("org.springframework.boot", plugin -> {
-                project.getTasks().named("bootJar").configure(task -> task.dependsOn(INJECT_TASK_NAME));
-                project.getTasks().named("resolveMainClassName").configure(task -> task.dependsOn(INJECT_TASK_NAME));
+                project.getTasks().named("bootJar").configure(task -> task.dependsOn(copyTask));
+                project.getTasks().named("resolveMainClassName").configure(task -> task.dependsOn(copyTask));
                 project.getPlugins().withId("war", warPlugin -> project.getTasks().named("bootWar")
-                        .configure(task -> task.dependsOn(INJECT_TASK_NAME)));
+                        .configure(task -> task.dependsOn(copyTask)));
             });
         });
+    }
+
+    /**
+     * Adds the optimizer core to the project's runtime classpath.
+     *
+     * <p>
+     * The application needs the import filter at runtime for the generated training file
+     * to have any effect. Adding it here keeps the version aligned with the plugin
+     * automatically; set {@code coreVersion} on the extension to override it.
+     */
+    private void addOptimizerCoreDependency(Project project, AutoConfigurationOptimizerExtension extension) {
+        project.getDependencies().addProvider("runtimeOnly", extension.getCoreVersion()
+                .map(version -> OPTIMIZER_CORE_COORDINATES + version));
     }
 }

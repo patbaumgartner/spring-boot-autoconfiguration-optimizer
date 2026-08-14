@@ -70,4 +70,13 @@ public abstract class AutoConfigurationOptimizerExtension {
      * @return the skip property
      */
     public abstract Property<Boolean> getSkip();
+
+    /**
+     * The version of {@code autoconfiguration-optimizer-core} added to the project's
+     * runtime classpath.
+     * Default: the version this plugin was built with.
+     *
+     * @return the core version property
+     */
+    public abstract Property<String> getCoreVersion();
 }
