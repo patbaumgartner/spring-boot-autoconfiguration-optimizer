@@ -47,6 +47,12 @@
 
   <dependencyManagement>
     <dependencies>
+      <!-- Override the Spring Boot BOM's log4j-api (2.25.4): CVE fixed in 2.25.5. -->
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-api</artifactId>
+        <version>2.25.5</version>
+      </dependency>
       <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-dependencies</artifactId>
