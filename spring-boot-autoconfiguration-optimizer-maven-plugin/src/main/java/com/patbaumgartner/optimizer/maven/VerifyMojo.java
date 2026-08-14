@@ -45,6 +45,12 @@ public class VerifyMojo extends AbstractMojo {
 	private MavenProject project;
 
 	/**
+	 * This plugin's own version, used to report the matching core version.
+	 */
+	@Parameter(defaultValue = "${plugin.version}", readonly = true)
+	private String pluginVersion;
+
+	/**
 	 * The expected location of the training properties file.
 	 */
 	@Parameter(property = "autoconfiguration.optimizer.trainingFile",
@@ -76,6 +82,10 @@ public class VerifyMojo extends AbstractMojo {
 			getLog().info("Spring Boot Autoconfiguration Optimizer: Verification skipped.");
 			return;
 		}
+
+		// A training file without the core on the runtime classpath means nothing reads
+		// it, which is exactly the silent no-op this goal exists to prevent.
+		OptimizerCoreDependency.require(this.project, this.pluginVersion);
 
 		Path trainingFilePath = this.trainingFile.toPath();
 		if (!Files.exists(trainingFilePath)) {
