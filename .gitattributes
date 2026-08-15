@@ -3,3 +3,4 @@ gradlew text eol=lf
 *.sh text eol=lf
 *.cmd text eol=crlf
 *.bat text eol=crlf
+.mvn/wrapper/maven-wrapper.properties text eol=lf
