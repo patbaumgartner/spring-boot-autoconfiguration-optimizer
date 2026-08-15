@@ -532,6 +532,11 @@ jobs:
       - name: Verify formatting and POM order
         run: mvn --batch-mode --no-transfer-progress validate
 
+      - name: Install the Maven modules the Gradle plugin compiles against
+        run: |
+          mvn --batch-mode --no-transfer-progress install -DskipTests -q -N
+          mvn --batch-mode --no-transfer-progress install -DskipTests -q -pl autoconfiguration-optimizer-core,autoconfiguration-optimizer-build-support
+
       - name: Verify Gradle plugin formatting
         working-directory: spring-boot-autoconfiguration-optimizer-gradle-plugin
         run: ./gradlew --no-daemon validatePlugins
