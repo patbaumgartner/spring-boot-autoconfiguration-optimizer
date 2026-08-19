@@ -244,7 +244,7 @@ jobs:
         with:
           name: benchmark-report-maven
           path: benchmarks/results/
-          retention-days: 90
+          retention-days: 7
 
       - name: Post benchmark summary
         run: |
@@ -510,7 +510,7 @@ jobs:
         with:
           name: benchmark-report-gradle
           path: benchmarks/results-gradle/
-          retention-days: 90
+          retention-days: 7
 
       - name: Post benchmark summary
         run: |
