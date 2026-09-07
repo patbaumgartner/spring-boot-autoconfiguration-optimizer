@@ -27,7 +27,7 @@
     <java.version>17</java.version>
 
     <!-- Plugin versions -->
-    <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
+    <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
     <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
     <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
     <maven-plugin-annotations.version>3.15.2</maven-plugin-annotations.version>
@@ -37,7 +37,7 @@
     <maven-plugin-plugin.version>3.15.2</maven-plugin-plugin.version>
     <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
     <flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>
-    <maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
+    <maven-surefire-plugin.version>3.6.0</maven-surefire-plugin.version>
     <maven.compiler.release>17</maven.compiler.release>
     <!-- Spring MVC resolves @RequestParam/@PathVariable names reflectively; without this
          the modules that do not inherit spring-boot-starter-parent fail at request time. -->
