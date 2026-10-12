@@ -36,7 +36,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: test-results-maven-java${{ matrix.java }}
           path: '**/target/surefire-reports/*.xml'
@@ -44,7 +44,7 @@ jobs:
 
       - name: Upload coverage reports
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-maven-java${{ matrix.java }}
           path: '**/target/site/jacoco/'
@@ -77,7 +77,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: test-results-gradle-java${{ matrix.java }}
           path: 'spring-boot-autoconfiguration-optimizer-gradle-plugin/build/test-results/**/*.xml'
@@ -85,7 +85,7 @@ jobs:
 
       - name: Upload coverage reports
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-gradle-java${{ matrix.java }}
           path: 'spring-boot-autoconfiguration-optimizer-gradle-plugin/build/reports/jacoco/'
@@ -118,7 +118,7 @@ jobs:
 
       - name: Upload Maven integration test results
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: integration-test-results-maven-java${{ matrix.java }}
           path: 'integration-tests/**/target/surefire-reports/*.xml'
@@ -145,7 +145,7 @@ jobs:
 
       - name: Upload Gradle integration test results
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: integration-test-results-gradle-java${{ matrix.java }}
           path: 'spring-boot-autoconfiguration-optimizer-gradle-plugin/build/test-results/**/*.xml'
