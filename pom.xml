@@ -36,7 +36,7 @@
     <maven-plugin-api.version>3.10.1</maven-plugin-api.version>
     <maven-plugin-plugin.version>3.16.0</maven-plugin-plugin.version>
     <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
-    <flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>
+    <flatten-maven-plugin.version>1.9.0</flatten-maven-plugin.version>
     <maven-surefire-plugin.version>3.6.1</maven-surefire-plugin.version>
     <maven.compiler.release>17</maven.compiler.release>
     <!-- Spring MVC resolves @RequestParam/@PathVariable names reflectively; without this
